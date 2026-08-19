@@ -4,18 +4,18 @@ MkAIHub 是公司内部的轻量级 AI 分享平台，用于发布、检索和�
 
 ## 当前状态
 
-已完成批次 0 工程基线和批次 1 认证、用户管理与六模块导航：
+已完成批次 0 工程基线、批次 1 认证导航和批次 2 展品核心：
 
 - Git 单仓库已初始化，默认分支为 `main`。
-- `backend/` 已具备 uv、FastAPI、SQLAlchemy、Alembic、SQLite、统一错误响应、结构化日志、认证和管理员用户接口。
-- `frontend/` 已具备 Vue 3、TypeScript、Vite、Vue Router、Pinia、Element Plus、登录态路由守卫和管理员用户页。
+- `backend/` 已具备认证、管理员用户接口，以及展品、附件、评论和探索聚合接口。
+- `frontend/` 已具备登录态路由守卫、管理员用户页，以及展品列表、创建/编辑、详情、附件、评论和 Markdown 展示页面。
 - 探索、任务、展品、知识库、Issues、竞赛六个一级路由可访问；未登录用户会进入登录页，普通员工不能进入管理页。
 - 首版采用 `EMPLOYEE` 和 `SYSTEM_ADMIN` 两种角色；不开放注册，只由系统管理员维护账号。
-- 已创建 `users`、`user_sessions` 两张表，其余业务表按后续批次逐步创建。
+- 已创建 `users`、`user_sessions`、`files`、`artifacts`、`artifact_files`、`comments` 六张表。
 - `deploy/` 已提供单应用 Dockerfile 与 Docker Compose，Vue 生产构建可由 FastAPI 托管。
 - 两份项目方案已校准知识库边界：知识库与展品类型相互独立，首版占位是主动控制范围。
 
-当前尚未实现展品、任务、Issues 和竞赛的业务 CRUD；知识库仍是占位页。首版安全保持轻量，只实现密码哈希、服务端会话、HttpOnly Cookie、简单 CSRF 和角色校验，不加入来源策略、限流、设备/IP 风控或复杂管理员治理。
+当前尚未实现任务、Issues 和竞赛的业务 CRUD；知识库仍是占位页。首版安全保持轻量，只实现密码哈希、服务端会话、HttpOnly Cookie、简单 CSRF、角色校验和附件的大小/扩展名基础限制，不加入来源策略、限流、设备/IP 风控、病毒扫描或复杂管理员治理。
 
 Element Plus 已锁定为表单和后台组件依赖，但不做全局整库注册；后续页面按实际使用的组件引入，避免无业务功能的初始化骨架承担整库首包体积。
 
@@ -87,9 +87,9 @@ npm run build
 
 本轮已实际验证：
 
-- `uv sync --locked`、Alembic 从空库升级和 `uv run pytest` 通过（16 项后端测试）。
-- `npm ci`、类型检查、`npm run test` 和生产构建通过（15 项前端测试）。
-- FastAPI 实际启动后，健康检查、认证接口、管理员用户接口、Vue 静态托管和 SPA 直接刷新通过。
+- `uv sync --locked`、Alembic 从空库升级和 `uv run pytest` 通过（19 项后端测试）。
+- `npm ci`、类型检查、`npm run test` 和生产构建通过（17 项前端测试）。
+- FastAPI 实际启动后，健康检查、认证、用户管理、展品、附件、评论、探索接口和 Vue 静态托管通过。
 - 浏览器实际检查管理员和员工登录、刷新保留会话、创建用户、权限拦截、自助改密和中文界面通过，控制台无错误或警告。
 - `docker compose config` 通过；本机 Docker 服务未运行，因此尚未构建和启动镜像。
 
@@ -135,4 +135,4 @@ docker compose --env-file .env -f deploy/docker-compose.yml exec app python -m a
 
 展品是首版核心，目标是完成创建、编辑、发布、检索、附件和评论闭环；任务与 Issues 提供基础 CRUD/状态骨架，竞赛提供展示和管理员维护，知识库只保留占位页，探索页只聚合模块入口和最近发布的展品。首版不包含 Toolkits、Data Lab、MapOS、Agent 自动执行、复杂协作、支付、SSO/MFA、独立知识库数据模型或多节点部署。
 
-批次 0 和批次 1 已完成，包含工程基线、认证、用户管理、导航骨架和实际接口联调；不包含业务 CRUD、容器运行、备份恢复演练、Git 提交或远端推送。
+批次 0、批次 1 和批次 2 已完成代码实现，包含工程基线、认证、用户管理、展品核心闭环和探索页最新展品；不包含任务、Issues、竞赛业务 CRUD、容器运行、备份恢复演练、Git 提交或远端推送。
