@@ -18,10 +18,12 @@ limited to 8-128 characters in the lightweight first version.
 
 The default health endpoint is `GET /api/health`. Authentication endpoints are
 under `/api/v1/auth`, while administrator user-management endpoints are under
-`/api/v1/admin/users`. Runtime data is kept outside the source package: the
-configured local SQLite database is under `data/`, and uploads are stored under
-`storage/uploads`.
+`/api/v1/admin/users`. Artifact CRUD and state actions are under
+`/api/v1/artifacts`, uploads and downloads are under `/api/v1/files`, and the
+minimal explore aggregation is `GET /api/v1/explore`. Runtime data is kept
+outside the source package: the configured local SQLite database is under
+`data/`, and uploads are stored under `storage/uploads`.
 
-Migration head `20260819_0002` creates the first-version `users` and
-`user_sessions` tables. Business tables are intentionally deferred to later
-development batches.
+Migration head `20260819_0003` creates `users`, `user_sessions`, `files`,
+`artifacts`, `artifact_files`, and artifact-only `comments`. Task, Issue, and
+competition tables are intentionally deferred to later development batches.

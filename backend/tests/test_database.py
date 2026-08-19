@@ -34,10 +34,18 @@ def test_alembic_upgrade_from_empty_database(tmp_path: Path) -> None:
     engine = create_engine(database_url)
     try:
         table_names = set(inspect(engine).get_table_names())
-        assert table_names == {"alembic_version", "users", "user_sessions"}
+        assert table_names == {
+            "alembic_version",
+            "artifact_files",
+            "artifacts",
+            "comments",
+            "files",
+            "user_sessions",
+            "users",
+        }
         with engine.connect() as connection:
             assert connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == (
-                "20260819_0002"
+                "20260819_0003"
             )
     finally:
         engine.dispose()

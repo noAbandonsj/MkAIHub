@@ -1,5 +1,19 @@
 """Pydantic request and response schemas."""
 
+from app.schemas.artifact import (
+    ArtifactCreate,
+    ArtifactListItem,
+    ArtifactListResponse,
+    ArtifactRead,
+    ArtifactStatus,
+    ArtifactUpdate,
+    CommentCreate,
+    CommentListResponse,
+    CommentRead,
+    ExploreResponse,
+    FileRead,
+    UserSummary,
+)
 from app.schemas.auth import (
     AdminResetPassword,
     AdminUserCreate,
@@ -14,14 +28,26 @@ from app.schemas.auth import (
 )
 
 __all__ = [
+    "ArtifactCreate",
+    "ArtifactListItem",
+    "ArtifactListResponse",
+    "ArtifactRead",
+    "ArtifactStatus",
+    "ArtifactUpdate",
     "AdminResetPassword",
     "AdminUserCreate",
     "AdminUserPatch",
     "ChangePasswordRequest",
+    "CommentCreate",
+    "CommentListResponse",
+    "CommentRead",
     "CsrfTokenResponse",
+    "ExploreResponse",
+    "FileRead",
     "LoginRequest",
     "LoginResponse",
     "UserListResponse",
     "UserRead",
     "UserRole",
+    "UserSummary",
 ]
