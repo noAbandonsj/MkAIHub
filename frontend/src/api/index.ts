@@ -1,3 +1,5 @@
 export * from './client'
 export * from './auth'
 export * from './admin'
+export * from './artifacts'
+export * from './explore'

@@ -1,9 +1,33 @@
 <script setup lang="ts">
+import { onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 
+import { exploreApi } from '@/api/explore'
+import { getApiErrorMessage } from '@/api/client'
+import ArtifactCard from '@/components/artifact/ArtifactCard.vue'
 import { routeNames } from '@/router/route-names'
 import { primaryNavigation } from '@/types/navigation'
 import EmptyState from '@/components/common/EmptyState.vue'
+import type { ArtifactListItem } from '@/types/artifact'
+
+const latestArtifacts = ref<ArtifactListItem[]>([])
+const loading = ref(false)
+const errorMessage = ref('')
+
+async function loadExplore(): Promise<void> {
+  loading.value = true
+  errorMessage.value = ''
+  try {
+    const response = await exploreApi.get()
+    latestArtifacts.value = response.latest_artifacts
+  } catch (error) {
+    errorMessage.value = getApiErrorMessage(error, '最新展品加载失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => void loadExplore())
 </script>
 
 <template>
@@ -47,7 +71,12 @@ import EmptyState from '@/components/common/EmptyState.vue'
         </div>
         <RouterLink class="section-link" :to="{ name: routeNames.artifacts }">查看全部</RouterLink>
       </div>
-      <div class="panel-card">
+      <p v-if="loading" class="muted-copy page-loading">正在加载最新展品…</p>
+      <p v-else-if="errorMessage" class="inline-error">{{ errorMessage }}</p>
+      <div v-else-if="latestArtifacts.length" class="artifact-grid explore-artifact-grid">
+        <ArtifactCard v-for="artifact in latestArtifacts" :key="artifact.id" :artifact="artifact" />
+      </div>
+      <div v-else class="panel-card">
         <EmptyState description="暂时还没有已发布的展品" />
       </div>
     </section>

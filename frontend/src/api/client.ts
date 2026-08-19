@@ -82,11 +82,12 @@ async function request<T>(
   const { body, headers, ...requestInit } = options
   const method = String(requestInit.method || 'GET').toUpperCase()
   const shouldAttachCsrf = isWriteMethod(method) && path !== loginPath
+  const isFormDataBody = typeof FormData !== 'undefined' && body instanceof FormData
 
   const resolvedCsrfToken = shouldAttachCsrf ? await requestCsrfToken() : null
   const requestHeaders = new Headers(headers)
   requestHeaders.set('Accept', 'application/json')
-  if (body !== undefined && !requestHeaders.has('Content-Type')) {
+  if (body !== undefined && !isFormDataBody && !requestHeaders.has('Content-Type')) {
     requestHeaders.set('Content-Type', 'application/json')
   }
   if (resolvedCsrfToken) {
@@ -98,7 +99,11 @@ async function request<T>(
     method,
     credentials: 'include',
     headers: requestHeaders,
-    body: body === undefined ? undefined : JSON.stringify(body),
+    body: body === undefined
+      ? undefined
+      : isFormDataBody
+        ? body as FormData
+        : JSON.stringify(body),
   })
 
   const payload = await readPayload(response)
@@ -134,6 +139,10 @@ export function getApiErrorMessage(error: unknown, fallback = '请求失败'): s
     return error.message || fallback
   }
   return fallback
+}
+
+export function resolveApiUrl(path: string): string {
+  return `${apiBaseUrl}${path}`
 }
 
 export const apiClient = {
