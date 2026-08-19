@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>知识库 - DataClawHub</title>
+  <meta name="description" content="DataClawHub 物流供应链知识资源库：支持文档上传与智能问答。" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=DM+Serif+Display&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body data-page="knowledge">
+  <!-- 顶部导航栏（由 app.js 渲染） -->
+  <header id="navbar"></header>
+
+  <main class="main">
+    <div class="container">
+      <!-- 面包屑导航 -->
+      <nav class="breadcrumb" aria-label="面包屑">
+        <a href="index.html">首页</a>
+        <span class="sep">/</span>
+        <a href="featured.html">探索</a>
+        <span class="sep">/</span>
+        <span class="current">知识库</span>
+      </nav>
+
+      <!-- 标题区 -->
+      <div class="sectionHeader" style="margin-top:8px">
+        <div>
+          <h2 class="sectionTitle" style="font-size:36px">知识<span class="accent">库</span></h2>
+          <p class="sectionDesc">物流供应链行业知识资源库 · 支持文档上传与智能问答</p>
+        </div>
+        <a class="btn btnPrimary" id="knowledgeUploadBtn" href="#" onclick="return false;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/></svg>
+          上传文档
+        </a>
+      </div>
+
+      <!-- 终端风格标识 -->
+      <div class="knowledgeTerminal">
+        [SYSTEM://KNOWLEDGE_BASE]<br />
+        &gt; 知识库在线，等待上传文档<span class="cursor"></span>
+      </div>
+
+      <!-- 知识库文档列表（由 app.js 渲染） -->
+      <div class="knowledgeList" id="knowledgeList"></div>
+
+      <!-- 智能问答 -->
+      <div class="knowledgeAsk">
+        <input id="askInput" type="text" placeholder="向知识库提问，例如：多式联运碳排放如何核算？" />
+        <button class="btn btnPrimary" id="askBtn" type="button">智能问答</button>
+      </div>
+    </div>
+  </main>
+
+  <!-- 页脚（由 app.js 渲染） -->
+  <footer id="footer"></footer>
+
+  <script src="assets/js/data.js"></script>
+  <script src="assets/js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+:root {
+  --mk-bg-primary: #fff7f0;
+  --mk-bg-card: #fffaf5;
+  --mk-bg-nav: rgba(255, 250, 245, 0.9);
+  --mk-primary: #ff6b35;
+  --mk-primary-hover: #e85a2a;
+  --mk-primary-soft: rgba(255, 107, 53, 0.1);
+  --mk-accent: #4a9eff;
+  --mk-accent-soft: rgba(74, 158, 255, 0.12);
+  --mk-border: #ead4bc;
+  --mk-text-primary: #2b1a12;
+  --mk-text-secondary: #8a6d5c;
+  --mk-text-muted: #b39a86;
+  --mk-white: #ffffff;
+  --mk-radius-sm: 6px;
+  --mk-radius-md: 8px;
+  --mk-radius-lg: 12px;
+  --mk-radius-pill: 999px;
+  --mk-shadow-sm: 0 2px 8px rgba(43, 26, 18, 0.06);
+  --mk-shadow-md: 0 8px 24px rgba(255, 107, 53, 0.12);
+  --mk-font-body: 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --mk-font-display: 'DM Serif Display', 'Noto Serif SC', 'PingFang SC', serif;
+  --mk-transition: 0.2s ease;
+}

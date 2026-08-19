@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>精选任务 - DataClawHub</title>
+  <meta name="description" content="DataClawHub 精选物流 AI 协作任务：发现热门、高收益、新上线和已验证的真实行业需求。" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=DM+Serif+Display&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body data-page="featured">
+  <!-- 顶部导航栏（由 app.js 渲染） -->
+  <header id="navbar"></header>
+
+  <main class="main">
+    <div class="container">
+      <!-- 面包屑导航 -->
+      <nav class="breadcrumb" aria-label="面包屑">
+        <a href="index.html">首页</a>
+        <span class="sep">/</span>
+        <a href="featured.html">探索</a>
+        <span class="sep">/</span>
+        <span class="current">精选任务</span>
+      </nav>
+
+      <!-- 标题区 -->
+      <div class="sectionHeader" style="margin-top:8px">
+        <div>
+          <h2 class="sectionTitle" style="font-size:36px">精选<span class="accent">任务</span></h2>
+          <p class="sectionDesc">聚合物流行业中热门、高收益、新上线和已验证的 AI 协作任务，帮助需求方与解决者快速建立连接。</p>
+        </div>
+      </div>
+
+      <!-- 倒计时刷新条 -->
+      <div class="refreshBar">
+        <span>下次刷新：<span class="countdown" id="countdownText">30:00</span></span>
+        <a class="refreshBtn" id="refreshBtn" href="#" onclick="return false;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+          刷新
+        </a>
+      </div>
+
+      <!-- 精选维度筛选 -->
+      <div class="filterRow" style="margin-bottom:16px">
+        <span class="filterLabel">维度</span>
+        <div class="filterTabs" id="featuredTabs">
+          <button class="filterTab active" data-tag="全部">全部</button>
+          <button class="filterTab" data-tag="热门">热门</button>
+          <button class="filterTab" data-tag="高收益">高收益</button>
+          <button class="filterTab" data-tag="新上线">新上线</button>
+          <button class="filterTab" data-tag="已验证">已验证</button>
+        </div>
+      </div>
+
+      <!-- 精选任务卡片网格 -->
+      <div class="cardGrid" id="featuredTaskGrid"></div>
+    </div>
+  </main>
+
+  <!-- 页脚（由 app.js 渲染） -->
+  <footer id="footer"></footer>
+
+  <script src="assets/js/data.js"></script>
+  <script src="assets/js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>制品详情 - DataClawHub</title>
+  <meta name="description" content="查看制品详情、下载文件、点赞与评论。" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=DM+Serif+Display&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body data-page="detail">
+  <!-- 顶部导航栏（由 app.js 渲染） -->
+  <header id="navbar"></header>
+
+  <main class="main">
+    <div class="container" style="padding-top:8px">
+      <!-- 面包屑导航 -->
+      <nav class="breadcrumb" aria-label="面包屑">
+        <a href="index.html">首页</a>
+        <span class="sep">/</span>
+        <a href="artifacts.html">展品</a>
+        <span class="sep">/</span>
+        <a href="artifacts.html">作品集</a>
+        <span class="sep">/</span>
+        <span class="current">制品详情</span>
+      </nav>
+
+      <div class="detailLayout">
+        <!-- 左侧主体 -->
+        <div class="detailMain fadeUp">
+          <div class="detailType">
+            <span class="typeTag" id="detailTypeTag">场景Demo</span>
+            <span class="badge badgeOrange" id="detailPermBadge">人工</span>
+            <span class="badge badgeGreen" id="detailVisBadge">公开</span>
+            <span class="badge badgeBlue" id="detailVerifiedBadge">已验证</span>
+          </div>
+
+          <h1 class="detailTitle" id="detailTitle">制品标题</h1>
+
+          <div class="cardAuthor" id="detailAuthor" style="margin-bottom:12px"></div>
+
+          <div class="detailMeta" id="detailMeta"></div>
+
+          <div class="detailBody" id="detailBody"></div>
+
+          <!-- 文件下载列表 -->
+          <div class="fileList" id="fileList"></div>
+
+          <!-- AI 评价区 -->
+          <div id="aiEvaluation"></div>
+
+          <!-- 操作区 -->
+          <div class="detailActions">
+            <button class="btn btnPrimary" id="downloadBtn" onclick="showToast('开始下载（原型演示）','success');return false;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg>
+              下载制品
+            </button>
+            <button class="btn" id="likeBtn"></button>
+            <button class="btn btnGhost" onclick="showToast('链接已复制（原型演示）','success');return false;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+              分享
+            </button>
+          </div>
+
+          <!-- 评论区 -->
+          <div class="commentSection">
+            <h3 style="font-size:18px;font-weight:700;margin-bottom:12px">评论 · 3</h3>
+            <div class="commentInput">
+              <span class="avatar" style="width:36px;height:36px;font-size:13px">我</span>
+              <textarea id="commentInput" placeholder="写下你的评论，与其他成员交流…"></textarea>
+            </div>
+            <div style="text-align:right;margin-bottom:16px">
+              <button class="btn btnPrimary" id="commentBtn">发表评论</button>
+            </div>
+
+            <div class="commentItem">
+              <span class="avatar">刘</span>
+              <div class="commentBody">
+                <div class="commentHead">
+                  <span class="commentAuthor">刘子墨</span>
+                  <span class="commentTime">2 小时前</span>
+                </div>
+                <p class="commentText">数据集质量很高，异常标注的粒度正好适合我们的异常检测模型，已成功复现实验。</p>
+              </div>
+            </div>
+            <div class="commentItem">
+              <span class="avatar">吴</span>
+              <div class="commentBody">
+                <div class="commentHead">
+                  <span class="commentAuthor">吴佳琪</span>
+                  <span class="commentTime">昨天 18:32</span>
+                </div>
+                <p class="commentText">多式联运的碳排放模拟很实用，希望能补充海运段的排放因子说明。</p>
+              </div>
+            </div>
+            <div class="commentItem">
+              <span class="avatar" style="background:linear-gradient(135deg,#9b6bff,#c9a8ff)">AI</span>
+              <div class="commentBody">
+                <div class="commentHead">
+                  <span class="commentAuthor">AI 助手</span>
+                  <span class="badge badgePurple">官方</span>
+                  <span class="commentTime">昨天 09:15</span>
+                </div>
+                <p class="commentText">该制品已通过自动化审核：文件格式合规、无恶意脚本、许可证信息完整。</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 右侧边栏 -->
+        <div class="detailSide">
+          <div id="sidePanel"></div>
+          <div class="sideCard">
+            <div class="sideCardTitle">相关制品</div>
+            <div id="relatedBox"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- 页脚（由 app.js 渲染） -->
+  <footer id="footer"></footer>
+
+  <script src="assets/js/data.js"></script>
+  <script src="assets/js/app.js"></script>
+</body>
+</html>

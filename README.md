@@ -1,0 +1,138 @@
+# MkAIHub
+
+MkAIHub 是公司内部的轻量级 AI 分享平台，用于发布、检索和复用提示词、代码、工作流、文档等实践成果，并提供任务、知识库、Issues 和竞赛的基础模块入口。首版采用 Vue 3 + TypeScript + Vite、FastAPI + SQLAlchemy + Alembic、SQLite 和本地文件存储，使用单一 Git 仓库管理源码、迁移、文档和部署配置。
+
+## 当前状态
+
+已完成批次 0 工程基线和批次 1 认证、用户管理与六模块导航：
+
+- Git 单仓库已初始化，默认分支为 `main`。
+- `backend/` 已具备 uv、FastAPI、SQLAlchemy、Alembic、SQLite、统一错误响应、结构化日志、认证和管理员用户接口。
+- `frontend/` 已具备 Vue 3、TypeScript、Vite、Vue Router、Pinia、Element Plus、登录态路由守卫和管理员用户页。
+- 探索、任务、展品、知识库、Issues、竞赛六个一级路由可访问；未登录用户会进入登录页，普通员工不能进入管理页。
+- 首版采用 `EMPLOYEE` 和 `SYSTEM_ADMIN` 两种角色；不开放注册，只由系统管理员维护账号。
+- 已创建 `users`、`user_sessions` 两张表，其余业务表按后续批次逐步创建。
+- `deploy/` 已提供单应用 Dockerfile 与 Docker Compose，Vue 生产构建可由 FastAPI 托管。
+- 两份项目方案已校准知识库边界：知识库与展品类型相互独立，首版占位是主动控制范围。
+
+当前尚未实现展品、任务、Issues 和竞赛的业务 CRUD；知识库仍是占位页。首版安全保持轻量，只实现密码哈希、服务端会话、HttpOnly Cookie、简单 CSRF 和角色校验，不加入来源策略、限流、设备/IP 风控或复杂管理员治理。
+
+Element Plus 已锁定为表单和后台组件依赖，但不做全局整库注册；后续页面按实际使用的组件引入，避免无业务功能的初始化骨架承担整库首包体积。
+
+## 目录约定
+
+```text
+MkAIHub/
+  backend/               # FastAPI、SQLAlchemy、Alembic、Pytest
+  frontend/              # Vue、Vite、TypeScript、npm
+  docs/                  # 产品规划与首版实现方案
+  prototype/             # 现有静态原型，仅作迁移参考
+  deploy/                # Dockerfile 与 Docker Compose
+  data/                  # SQLite 运行数据，不提交
+  storage/uploads/       # 上传文件，不提交
+```
+
+部署形态是一个 FastAPI 单应用容器：FastAPI 提供 REST API，并托管前端生产构建产物；SQLite 数据库和 `storage/uploads/` 通过 Docker Compose 映射到宿主机。正式环境保持单个 Uvicorn worker，不拆分数据库、前端和后台服务。
+
+## 本地开发
+
+准备 Python 3.13、uv、Node.js（方案基线为 v24）和 npm。先在项目根目录复制环境模板，并设置仅本机使用的随机 `APP_SECRET_KEY`：
+
+```powershell
+Copy-Item .env.example .env
+```
+
+后端命令目标（在 `backend/` 目录执行）：
+
+```powershell
+Set-Location backend
+uv sync --locked
+uv run alembic upgrade head
+uv run python -m app.cli create-admin
+uv run uvicorn app.main:app --reload
+```
+
+`create-admin` 会交互式询问用户名、显示名称和密码，不会自动生成默认密码。密码首版只校验 8–128 位；管理员创建后即可通过前端登录。
+
+前端命令目标（另开终端，在 `frontend/` 目录执行）：
+
+```powershell
+Set-Location frontend
+npm ci
+npm run dev
+```
+
+前端开发服务器会把 `/api` 请求代理到 `http://127.0.0.1:8000`，因此后端按上述默认端口启动即可联调。Linux/macOS 使用等价的 `cp .env.example .env`、`cd backend` 和 `cd frontend` 命令即可。后端无论从项目根目录还是 `backend/` 启动，都固定读取仓库根目录的 `.env`；不需要维护第二份配置文件。生产 Compose 使用命令行 `--env-file .env` 将同一份根目录配置传入容器。
+
+## 迁移、测试与构建入口
+
+后端迁移和测试：
+
+```text
+cd backend
+uv run alembic upgrade head
+uv run pytest
+```
+
+前端类型检查、测试和生产构建：
+
+```text
+cd frontend
+npm run type-check
+npm run test
+npm run build
+```
+
+`uv sync --locked` 依赖提交的 `backend/uv.lock`；`npm ci` 依赖提交的 `frontend/package-lock.json`。
+
+本轮已实际验证：
+
+- `uv sync --locked`、Alembic 从空库升级和 `uv run pytest` 通过（16 项后端测试）。
+- `npm ci`、类型检查、`npm run test` 和生产构建通过（15 项前端测试）。
+- FastAPI 实际启动后，健康检查、认证接口、管理员用户接口、Vue 静态托管和 SPA 直接刷新通过。
+- 浏览器实际检查管理员和员工登录、刷新保留会话、创建用户、权限拦截、自助改密和中文界面通过，控制台无错误或警告。
+- `docker compose config` 通过；本机 Docker 服务未运行，因此尚未构建和启动镜像。
+
+## 当前工作区演示账号
+
+本地浏览器联调使用的演示数据库保留在 `data/batch1-integration.db`。该文件受 `.gitignore` 排除，只用于当前工作区演示，不是生产数据，也不会随 Git 源码分发。
+
+| 角色 | 用户名 | 密码 |
+|---|---|---|
+| 系统管理员 | `admin` | `Admin1234` |
+| 普通员工 | `employee` | `Employee456` |
+
+从 `backend/` 启动该演示库：
+
+```powershell
+$env:DATABASE_URL = "sqlite:///../data/batch1-integration.db"
+uv run uvicorn app.main:app --reload
+```
+
+演示密码仅为本地体验准备，禁止复制到正式环境。正式部署必须通过 `create-admin` 单独创建管理员并使用独立密码。
+
+## Docker Compose 部署
+
+Linux 单机部署使用 `deploy/docker-compose.yml`，只启动一个 `app` 服务。Dockerfile 的构建阶段执行 `npm ci`、`npm run build` 和 `uv sync --locked`，运行阶段由 FastAPI 托管 `frontend/dist`，并以一个 Uvicorn worker 启动。
+
+```bash
+cp .env.example .env
+# 编辑 .env：设置随机 APP_SECRET_KEY、APP_ENV=production，
+# 并将 FRONTEND_ORIGIN 改为用户实际访问地址。
+docker compose --env-file .env -f deploy/docker-compose.yml config
+docker compose --env-file .env -f deploy/docker-compose.yml up -d --build
+docker compose --env-file .env -f deploy/docker-compose.yml exec app alembic upgrade head
+docker compose --env-file .env -f deploy/docker-compose.yml exec app python -m app.cli create-admin
+```
+
+`data/` 映射到容器的 `/app/data`，`storage/uploads/` 映射到 `/app/storage/uploads`；两者位于宿主机并随容器重启保留。首次使用时 Docker Compose 会创建这两个目录，Linux 主机应确保运行容器的用户具有读写权限。健康检查目标为 `/api/health`。备份时必须同时备份 SQLite 文件和上传目录。
+
+## 环境变量
+
+`.env.example` 覆盖首版方案要求的应用名称、密钥、SQLite 地址、数据/上传目录、上传限制、会话、前端来源、日志级别和建议的初始管理员用户名。应用不会根据该用户名自动创建账号；管理员必须显式执行 `create-admin`。初始密码、生产密钥、`.env`、SQLite 数据库和上传文件都不得提交 Git。生产 Compose 会将数据库和目录路径切换为容器内的持久化挂载路径。
+
+## 首版边界
+
+展品是首版核心，目标是完成创建、编辑、发布、检索、附件和评论闭环；任务与 Issues 提供基础 CRUD/状态骨架，竞赛提供展示和管理员维护，知识库只保留占位页，探索页只聚合模块入口和最近发布的展品。首版不包含 Toolkits、Data Lab、MapOS、Agent 自动执行、复杂协作、支付、SSO/MFA、独立知识库数据模型或多节点部署。
+
+批次 0 和批次 1 已完成，包含工程基线、认证、用户管理、导航骨架和实际接口联调；不包含业务 CRUD、容器运行、备份恢复演练、Git 提交或远端推送。

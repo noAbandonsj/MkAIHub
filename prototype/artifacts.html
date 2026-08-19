@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>展品 · 制品库 - DataClawHub</title>
+  <meta name="description" content="DataClawHub 制品库：浏览与下载物流 AI 数据集、算法模型、场景 Demo 与研究报告。" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=DM+Serif+Display&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body data-page="artifacts">
+  <!-- 顶部导航栏（由 app.js 渲染） -->
+  <header id="navbar"></header>
+
+  <main class="main">
+    <div class="container">
+      <!-- 面包屑导航 -->
+      <nav class="breadcrumb" aria-label="面包屑">
+        <a href="index.html">首页</a>
+        <span class="sep">/</span>
+        <a href="#">展品</a>
+        <span class="sep">/</span>
+        <span class="current">作品集</span>
+      </nav>
+
+      <!-- 标题区 -->
+      <div class="sectionHeader" style="margin-top:8px">
+        <div>
+          <h2 class="sectionTitle" style="font-size:36px">作品<span class="accent">集</span></h2>
+          <p class="sectionDesc">浏览社区协作产生的数据集、报告、源码和其他物流 AI 制品；动态内容始终以实时权限与客户隐私检查结果为准。</p>
+        </div>
+        <a class="btn btnPrimary" href="#" onclick="showToast('上传制品（原型演示）','success');return false;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/></svg>
+          + 上传制品
+        </a>
+      </div>
+
+      <!-- 筛选搜索栏 -->
+      <div class="filterBar">
+        <div class="filterRow">
+          <div class="searchModeTabs" id="searchModeTabs"></div>
+        </div>
+        <div class="filterRow">
+          <div class="searchBox">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+            <input type="text" id="searchInput" placeholder="输入关键词搜索制品文件名..." />
+          </div>
+          <button class="btn btnPrimary" id="searchBtn">搜索</button>
+          <button class="btn btnGhost" id="clearBtn">清空</button>
+          <span class="filterDivider"></span>
+          <div class="filterGroup">
+            <label>格式</label>
+            <div class="selectBox">
+              <select id="formatSelect"></select>
+            </div>
+          </div>
+          <div class="filterGroup">
+            <label class="checkBox">
+              <input type="checkbox" id="verifiedCheck" /> 已验证
+            </label>
+          </div>
+          <div class="filterGroup">
+            <label class="checkBox">
+              <input type="checkbox" id="videoCheck" /> 有视频
+            </label>
+          </div>
+          <div class="filterGroup">
+            <label>排序</label>
+            <div class="selectBox">
+              <select id="sortSelect"></select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 制品卡片网格 -->
+      <div class="cardGrid" id="artifactGrid"></div>
+
+      <!-- 分页 -->
+      <div class="pagination" id="pagination"></div>
+    </div>
+  </main>
+
+  <!-- 页脚（由 app.js 渲染） -->
+  <footer id="footer"></footer>
+
+  <script src="assets/js/data.js"></script>
+  <script src="assets/js/app.js"></script>
+</body>
+</html>

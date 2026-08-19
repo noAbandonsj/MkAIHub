@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>议题详情 - DataClawHub</title>
+  <meta name="description" content="查看议题详情、优先级、标签、指派人与评论。" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=DM+Serif+Display&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body data-page="issueDetail">
+  <!-- 顶部导航栏（由 app.js 渲染） -->
+  <header id="navbar"></header>
+
+  <main class="main">
+    <div class="container" style="padding-top:8px">
+      <!-- 面包屑导航 -->
+      <nav class="breadcrumb" aria-label="面包屑">
+        <a href="index.html">首页</a>
+        <span class="sep">/</span>
+        <a href="issues.html">Issues</a>
+        <span class="sep">/</span>
+        <span class="current">议题详情</span>
+      </nav>
+
+      <div class="detailLayout">
+        <!-- 左侧主体 -->
+        <div class="detailMain fadeUp" id="issueMain"></div>
+
+        <!-- 右侧边栏 -->
+        <div class="detailSide" id="issueSide"></div>
+      </div>
+    </div>
+  </main>
+
+  <!-- 页脚（由 app.js 渲染） -->
+  <footer id="footer"></footer>
+
+  <script src="assets/js/data.js"></script>
+  <script src="assets/js/app.js"></script>
+</body>
+</html>

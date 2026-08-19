@@ -1,0 +1,47 @@
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    image: mkaihub:latest
+    restart: unless-stopped
+    init: true
+    environment:
+      APP_ENV: production
+      APP_NAME: ${APP_NAME:-MkAIHub}
+      APP_SECRET_KEY: ${APP_SECRET_KEY:?APP_SECRET_KEY must be set in .env}
+      DATABASE_URL: sqlite:////app/data/mkaihub.sqlite3
+      DATA_DIR: /app/data
+      UPLOAD_DIR: /app/storage/uploads
+      MAX_UPLOAD_SIZE_MB: ${MAX_UPLOAD_SIZE_MB:-50}
+      MAX_ATTACHMENTS_PER_ARTIFACT: ${MAX_ATTACHMENTS_PER_ARTIFACT:-10}
+      ALLOWED_UPLOAD_EXTENSIONS: ${ALLOWED_UPLOAD_EXTENSIONS:-pdf,docx,xlsx,pptx,md,txt,csv,json,png,jpg,jpeg,webp,py,js,ts,vue,sql,yaml,yml,toml,ipynb,zip}
+      SESSION_COOKIE_NAME: ${SESSION_COOKIE_NAME:-mkaihub_session}
+      SESSION_TTL_HOURS: ${SESSION_TTL_HOURS:-24}
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:8000}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      INITIAL_ADMIN_USERNAME: ${INITIAL_ADMIN_USERNAME:-admin}
+    ports:
+      - "${APP_PORT:-8000}:8000"
+    volumes:
+      - ../data:/app/data
+      - ../storage/uploads:/app/storage/uploads
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=3)",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s

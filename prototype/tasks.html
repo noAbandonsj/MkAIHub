@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>任务广场 - DataClawHub</title>
+  <meta name="description" content="DataClawHub 物流 AI 任务：承接任务，赢取积分与奖励。" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=DM+Serif+Display&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body data-page="tasks">
+  <!-- 顶部导航栏（由 app.js 渲染） -->
+  <header id="navbar"></header>
+
+  <main class="main">
+    <div class="container">
+      <!-- 面包屑导航 -->
+      <nav class="breadcrumb" aria-label="面包屑">
+        <a href="index.html">首页</a>
+        <span class="sep">/</span>
+        <span class="current">任务广场</span>
+      </nav>
+
+      <!-- 标题区 -->
+      <div class="sectionHeader" style="margin-top:8px">
+        <div>
+          <h2 class="sectionTitle" style="font-size:36px">任务<span class="accent">广场</span></h2>
+          <p class="sectionDesc">承接物流 AI 任务，赢取积分与奖励，与社区共同攻克行业难题。</p>
+        </div>
+        <a class="btn btnPrimary" href="#" onclick="showToast('发布任务（原型演示）','success');return false;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+          发布任务
+        </a>
+      </div>
+
+      <!-- 状态筛选 -->
+      <div class="filterRow" style="margin-bottom:16px">
+        <span class="filterLabel">状态</span>
+        <div class="filterTabs" id="taskTabs">
+          <button class="filterTab active" data-status="全部">全部</button>
+          <button class="filterTab" data-status="进行中">进行中</button>
+          <button class="filterTab" data-status="已完成">已完成</button>
+          <button class="filterTab" data-status="已关闭">已关闭</button>
+        </div>
+      </div>
+
+      <!-- 任务卡片网格 -->
+      <div class="cardGrid" id="taskGrid"></div>
+    </div>
+  </main>
+
+  <!-- 页脚（由 app.js 渲染） -->
+  <footer id="footer"></footer>
+
+  <script src="assets/js/data.js"></script>
+  <script src="assets/js/app.js"></script>
+</body>
+</html>

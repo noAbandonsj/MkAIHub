@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>赛事广场 - DataClawHub</title>
+  <meta name="description" content="DataClawHub 物流 AI 竞赛：参与挑战赛，赢取丰厚奖励。" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=DM+Serif+Display&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body data-page="competitions">
+  <!-- 顶部导航栏（由 app.js 渲染） -->
+  <header id="navbar"></header>
+
+  <main class="main">
+    <div class="container">
+      <!-- 面包屑导航 -->
+      <nav class="breadcrumb" aria-label="面包屑">
+        <a href="index.html">首页</a>
+        <span class="sep">/</span>
+        <span class="current">赛事广场</span>
+      </nav>
+
+      <!-- 页面 Hero -->
+      <div class="pageHero">
+        <div class="heroContent">
+          <h1 class="heroTitle">
+            <svg class="heroIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>
+            赛事广场
+          </h1>
+          <p class="heroDesc">参与物流与供应链 AI 赛事，用数据、模型和开放协作解决真实行业问题</p>
+        </div>
+      </div>
+
+      <!-- 赛事预告 -->
+      <div class="upcomingSection">
+        <div class="upcomingHeader">
+          <h2 class="upcomingTitle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="upcomingIcon"><path d="M18 4l3 3-3 3"/><path d="M6 20l-3-3 3-3"/><path d="M6 4l-3 3 3 3"/><path d="M18 20l3-3-3-3"/></svg>
+            赛事预告
+          </h2>
+          <span class="upcomingSubtitle">敬请关注最新的竞赛预告！</span>
+        </div>
+        <div class="upcomingList" id="upcomingList"></div>
+        <div class="upcomingEmpty" id="upcomingEmpty">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="upcomingEmptyIcon"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+          <p>暂无即将开始的赛事，敬请期待</p>
+        </div>
+      </div>
+
+      <!-- 搜索与排序工具栏 -->
+      <div class="toolbar">
+        <div class="searchBox" style="flex:0 0 auto;width:340px;max-width:100%">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="competitionSearchInput" placeholder="搜索赛事名称..." />
+        </div>
+        <div class="selectBox">
+          <select id="competitionSortSelect"></select>
+        </div>
+      </div>
+
+      <!-- 领域分类 -->
+      <div class="categoryBar" id="competitionCategoryBar"></div>
+
+      <!-- 状态筛选 -->
+      <div class="statusBar" id="competitionStatusBar"></div>
+
+      <!-- 竞赛卡片网格 -->
+      <div class="cardGrid" id="competitionGrid"></div>
+    </div>
+  </main>
+
+  <!-- 页脚（由 app.js 渲染） -->
+  <footer id="footer"></footer>
+
+  <script src="assets/js/data.js"></script>
+  <script src="assets/js/app.js"></script>
+</body>
+</html>
