@@ -57,10 +57,14 @@ def list_artifacts(
     conditions = []
     if mine:
         conditions.append(Artifact.author_id == auth.user.id)
+    elif status_filter is not None and auth.user.role == UserRole.SYSTEM_ADMIN.value:
+        # Administrators maintain archived content, so an explicit status
+        # filter replaces the default published-only scope for them.
+        conditions.append(Artifact.status == status_filter.value)
     else:
         conditions.append(Artifact.status == ArtifactStatus.PUBLISHED.value)
-    if status_filter is not None:
-        conditions.append(Artifact.status == status_filter.value)
+        if status_filter is not None:
+            conditions.append(Artifact.status == status_filter.value)
     search = q.strip() if q else ""
     if search:
         pattern = f"%{search}%"

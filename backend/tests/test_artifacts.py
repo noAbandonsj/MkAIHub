@@ -128,6 +128,27 @@ def test_artifact_attachment_publish_comment_and_visibility(client: TestClient, 
     assert archived.status_code == 200
     assert archived.json()["status"] == "ARCHIVED"
     assert client.get("/api/v1/artifacts").json()["total"] == 0
+    # Only administrators can use a status filter to browse archived content.
+    reader_again = TestClient(client.app)
+    try:
+        reader_headers_again = login(reader_again, "reader")
+        assert reader_again.get(
+            "/api/v1/artifacts", params={"status": "ARCHIVED"}, headers=reader_headers_again
+        ).json()["total"] == 0
+    finally:
+        reader_again.close()
+    seed_user(test_settings, username="boss", role="SYSTEM_ADMIN")
+    admin = TestClient(client.app)
+    try:
+        admin_headers = login(admin, "boss")
+        admin_archived = admin.get(
+            "/api/v1/artifacts", params={"status": "ARCHIVED"}, headers=admin_headers
+        ).json()
+        assert admin_archived["total"] == 1
+        assert admin_archived["items"][0]["status"] == "ARCHIVED"
+        assert admin.get("/api/v1/artifacts", headers=admin_headers).json()["total"] == 0
+    finally:
+        admin.close()
     assert client.patch(
         f"/api/v1/artifacts/{artifact_id}",
         headers=author_headers,
