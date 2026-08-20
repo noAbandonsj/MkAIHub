@@ -23,6 +23,12 @@ backend/build/
 .coverage.*
 htmlcov/
 
+# .NET
+bin/
+obj/
+*.user
+*.suo
+
 # Node.js / Vite
 node_modules/
 frontend/node_modules/
