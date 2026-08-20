@@ -125,7 +125,7 @@ docker compose --env-file .env -f deploy/docker-compose.yml exec app alembic upg
 docker compose --env-file .env -f deploy/docker-compose.yml exec app python -m app.cli create-admin
 ```
 
-`data/` 映射到容器的 `/app/data`，`storage/uploads/` 映射到 `/app/storage/uploads`；两者位于宿主机并随容器重启保留。首次使用时 Docker Compose 会创建这两个目录，Linux 主机应确保运行容器的用户具有读写权限。健康检查目标为 `/api/health`。备份时必须同时备份 SQLite 文件和上传目录。
+`data/` 映射到容器的 `/app/data`，`storage/uploads/` 映射到 `/app/storage/uploads`；两者位于宿主机并随容器重启保留。首次使用时 Docker Compose 会创建这两个目录，Linux 主机应确保运行容器的用户具有读写权限。健康检查目标为 `/api/health`。数据库与上传文件的备份、恢复命令和演练记录见 `deploy/BACKUP.md`。
 
 ## 环境变量
 
