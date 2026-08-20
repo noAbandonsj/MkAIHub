@@ -9,13 +9,17 @@ import 'element-plus/es/components/message-box/style/css'
 
 import { artifactsApi } from '@/api/artifacts'
 import { getApiErrorMessage } from '@/api/client'
+import { issuesApi } from '@/api/issues'
 import { useSessionStore } from '@/stores/session'
-import type { ArtifactStatus, CommentRead } from '@/types/artifact'
+import type { CommentListResponse, CommentRead } from '@/types/artifact'
 import { formatDate } from '@/utils/format'
 
+type CommentTarget = 'artifact' | 'issue'
+
 const props = defineProps<{
-  artifactId: number
-  status: ArtifactStatus
+  targetType: CommentTarget
+  targetId: number
+  canComment: boolean
 }>()
 
 const session = useSessionStore()
@@ -25,11 +29,17 @@ const loading = ref(false)
 const submitting = ref(false)
 const errorMessage = ref('')
 
+function listComments(): Promise<CommentListResponse> {
+  return props.targetType === 'artifact'
+    ? artifactsApi.listComments(props.targetId)
+    : issuesApi.listComments(props.targetId)
+}
+
 async function loadComments(): Promise<void> {
   loading.value = true
   errorMessage.value = ''
   try {
-    const response = await artifactsApi.listComments(props.artifactId)
+    const response = await listComments()
     comments.value = response.items
   } catch (error) {
     errorMessage.value = getApiErrorMessage(error, '评论加载失败')
@@ -46,7 +56,9 @@ async function submitComment(): Promise<void> {
   }
   submitting.value = true
   try {
-    const created = await artifactsApi.createComment(props.artifactId, value)
+    const created = props.targetType === 'artifact'
+      ? await artifactsApi.createComment(props.targetId, value)
+      : await issuesApi.createComment(props.targetId, value)
     comments.value.push(created)
     content.value = ''
     ElMessage.success('评论已发表')
@@ -69,18 +81,18 @@ async function deleteComment(comment: CommentRead): Promise<void> {
   }
 }
 
-watch(() => props.artifactId, () => void loadComments())
+watch(() => [props.targetType, props.targetId], () => void loadComments())
 onMounted(() => void loadComments())
 </script>
 
 <template>
-  <section class="comment-section" aria-labelledby="artifact-comments-title">
+  <section class="comment-section" aria-labelledby="comment-section-title">
     <div class="detail-section-heading">
-      <h2 id="artifact-comments-title">评论</h2>
+      <h2 id="comment-section-title">评论</h2>
       <span>{{ comments.length }} 条</span>
     </div>
     <ElAlert v-if="errorMessage" :title="errorMessage" type="error" :closable="false" />
-    <div v-if="status === 'PUBLISHED'" class="comment-compose">
+    <div v-if="canComment" class="comment-compose">
       <ElInput
         v-model="content"
         type="textarea"

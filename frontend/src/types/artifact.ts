@@ -51,7 +51,8 @@ export interface ArtifactInput {
 
 export interface CommentRead {
   id: number
-  artifact_id: number
+  artifact_id?: number | null
+  issue_id?: number | null
   author: UserSummary
   content: string
   status: CommentStatus

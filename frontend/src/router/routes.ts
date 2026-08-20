@@ -31,19 +31,19 @@ export const routes = [
       {
         path: 'tasks/new',
         name: routeNames.taskNew,
-        component: () => import('@/views/common/ModulePlaceholderView.vue'),
+        component: () => import('@/views/tasks/TaskFormView.vue'),
         meta: { label: '新建任务', requiresAuth: true, navRoute: routeNames.tasks },
       },
       {
         path: 'tasks/:id',
         name: routeNames.taskDetail,
-        component: () => import('@/views/common/ModulePlaceholderView.vue'),
+        component: () => import('@/views/tasks/TaskDetailView.vue'),
         meta: { label: '任务详情', requiresAuth: true, navRoute: routeNames.tasks },
       },
       {
         path: 'tasks/:id/edit',
         name: routeNames.taskEdit,
-        component: () => import('@/views/common/ModulePlaceholderView.vue'),
+        component: () => import('@/views/tasks/TaskFormView.vue'),
         meta: { label: '编辑任务', requiresAuth: true, navRoute: routeNames.tasks },
       },
       {
@@ -85,13 +85,13 @@ export const routes = [
       {
         path: 'issues/new',
         name: routeNames.issueNew,
-        component: () => import('@/views/common/ModulePlaceholderView.vue'),
+        component: () => import('@/views/issues/IssueFormView.vue'),
         meta: { label: '发起 Issue', requiresAuth: true, navRoute: routeNames.issues },
       },
       {
         path: 'issues/:id',
         name: routeNames.issueDetail,
-        component: () => import('@/views/common/ModulePlaceholderView.vue'),
+        component: () => import('@/views/issues/IssueDetailView.vue'),
         meta: { label: 'Issue 详情', requiresAuth: true, navRoute: routeNames.issues },
       },
       {

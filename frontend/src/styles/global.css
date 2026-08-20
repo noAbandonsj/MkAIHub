@@ -639,6 +639,65 @@ a {
   background: rgba(121, 89, 137, 0.12);
 }
 
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: var(--mk-radius-pill);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.status-pill.is-open {
+  color: #1d5f8a;
+  background: rgba(47, 121, 168, 0.14);
+}
+
+.status-pill.is-done {
+  color: #16794b;
+  background: rgba(37, 166, 100, 0.12);
+}
+
+.status-pill.is-closed {
+  color: #6f5a78;
+  background: rgba(121, 89, 137, 0.12);
+}
+
+.list-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 16px 20px;
+}
+
+.list-search {
+  width: min(320px, 100%);
+}
+
+.list-status-filter {
+  width: 140px;
+}
+
+.module-table {
+  width: 100%;
+}
+
+.table-title-link {
+  color: var(--mk-accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.table-title-link:hover {
+  text-decoration: underline;
+}
+
+.task-deadline-picker {
+  max-width: 260px;
+}
+
 .artifact-pagination {
   justify-content: center;
   margin-top: 28px;

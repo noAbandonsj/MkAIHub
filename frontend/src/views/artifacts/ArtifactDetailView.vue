@@ -11,8 +11,8 @@ import { artifactsApi } from '@/api/artifacts'
 import { getApiErrorMessage } from '@/api/client'
 import ArtifactStatusBadge from '@/components/artifact/ArtifactStatusBadge.vue'
 import AttachmentList from '@/components/artifact/AttachmentList.vue'
-import CommentSection from '@/components/artifact/CommentSection.vue'
 import MarkdownViewer from '@/components/artifact/MarkdownViewer.vue'
+import CommentSection from '@/components/common/CommentSection.vue'
 import { routeNames } from '@/router/route-names'
 import { useSessionStore } from '@/stores/session'
 import type { ArtifactRead } from '@/types/artifact'
@@ -142,7 +142,11 @@ onMounted(() => void loadArtifact())
             <AttachmentList :files="artifact.files" />
           </section>
 
-          <CommentSection :artifact-id="artifact.id" :status="artifact.status" />
+          <CommentSection
+            target-type="artifact"
+            :target-id="artifact.id"
+            :can-comment="artifact.status === 'PUBLISHED'"
+          />
         </main>
 
         <aside class="artifact-detail-side">
