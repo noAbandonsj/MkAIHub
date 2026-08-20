@@ -103,7 +103,7 @@ export const routes = [
       {
         path: 'competitions/:id',
         name: routeNames.competitionDetail,
-        component: () => import('@/views/common/ModulePlaceholderView.vue'),
+        component: () => import('@/views/competitions/CompetitionDetailView.vue'),
         meta: { label: '竞赛详情', requiresAuth: true, navRoute: routeNames.competitions },
       },
       {

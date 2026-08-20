@@ -1,3 +1,4 @@
+import type { CompetitionStatus } from '@/types/competition'
 import type { IssueStatus } from '@/types/issue'
 import type { TaskStatus } from '@/types/task'
 
@@ -23,4 +24,16 @@ export const issueStatusLabels: Record<IssueStatus, string> = {
 export const issueStatusTones: Record<IssueStatus, StatusTone> = {
   OPEN: 'open',
   CLOSED: 'closed',
+}
+
+export const competitionStatusLabels: Record<CompetitionStatus, string> = {
+  UPCOMING: '即将开始',
+  ONGOING: '进行中',
+  ENDED: '已结束',
+}
+
+export const competitionStatusTones: Record<CompetitionStatus, StatusTone> = {
+  UPCOMING: 'open',
+  ONGOING: 'done',
+  ENDED: 'closed',
 }

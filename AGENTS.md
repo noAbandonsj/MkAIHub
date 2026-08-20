@@ -47,6 +47,6 @@ C# 后端（在 `backend_c#/` 下执行）：`dotnet build`、`dotnet test`、
 - Alembic 迁移文件名用日期前缀（`20260819_000N_*`）；C# 版 `MkAIHub.Api/Data/Migrator.cs` 复刻同一套 DDL 并维护 `alembic_version`，新增迁移时两处需同步。
 - 前端 Element Plus 按组件逐个引入，禁止全局整库注册；`@` 别名指向 `frontend/src`；代码风格为无分号、单引号。
 - `.env` 固定从仓库根目录读取（无论从哪个目录启动）；环境变量见 `.env.example`。`.env`、数据库、上传文件、初始密码不得提交。
-- 首版边界（见 docs/）：知识库为占位页；竞赛后端接口已就绪，前端暂为占位路由；安全保持轻量，不加限流/病毒扫描/SSO 等。
+- 首版边界（见 docs/）：知识库为占位页；安全保持轻量，不加限流/病毒扫描/SSO 等。
 - 本地演示库 `data/batch1-integration.db`（admin/Admin1234、employee/Employee456）仅限本机联调，禁止用于正式环境。
 - 部署形态为单容器单 Uvicorn worker：FastAPI 同时托管 `frontend/dist`；SQLite 与 `storage/uploads/` 通过 Compose 卷挂载。

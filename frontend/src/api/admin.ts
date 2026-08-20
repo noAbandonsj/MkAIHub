@@ -61,6 +61,14 @@ export const adminApi = {
   resetPassword(id: number, input: ResetPasswordInput) {
     return apiClient.post<void>(`/admin/users/${id}/reset-password`, input)
   },
+
+  hideComment(commentId: number) {
+    return apiClient.post<void>(`/admin/comments/${commentId}/hide`)
+  },
+
+  restoreComment(commentId: number) {
+    return apiClient.post<void>(`/admin/comments/${commentId}/restore`)
+  },
 }
 
 export type AdminApi = typeof adminApi

@@ -6,7 +6,6 @@ import {
   ElAlert,
   ElButton,
   ElDialog,
-  ElEmpty,
   ElForm,
   ElFormItem,
   ElInput,
@@ -24,7 +23,6 @@ import {
 import 'element-plus/es/components/alert/style/css'
 import 'element-plus/es/components/button/style/css'
 import 'element-plus/es/components/dialog/style/css'
-import 'element-plus/es/components/empty/style/css'
 import 'element-plus/es/components/form/style/css'
 import 'element-plus/es/components/form-item/style/css'
 import 'element-plus/es/components/input/style/css'
@@ -33,6 +31,7 @@ import 'element-plus/es/components/pagination/style/css'
 import 'element-plus/es/components/select/style/css'
 import 'element-plus/es/components/switch/style/css'
 import 'element-plus/es/components/table/style/css'
+import 'element-plus/es/components/table-column/style/css'
 import 'element-plus/es/components/tag/style/css'
 import 'element-plus/es/components/tab-pane/style/css'
 import 'element-plus/es/components/tabs/style/css'
@@ -42,6 +41,8 @@ import { ApiError, getApiErrorMessage } from '@/api/client'
 import { routeNames } from '@/router/route-names'
 import { useSessionStore } from '@/stores/session'
 import type { UserRead, UserRole } from '@/types/user'
+import AdminCompetitionsPanel from './AdminCompetitionsPanel.vue'
+import AdminContentPanel from './AdminContentPanel.vue'
 
 type AdminTab = 'users' | 'content' | 'competitions'
 
@@ -280,7 +281,7 @@ onMounted(() => {
       <div>
         <p class="page-eyebrow">MkAIHub</p>
         <h1 class="page-title">管理</h1>
-        <p class="page-description">系统管理员可在一个页面维护账号，内容和竞赛页签暂保留为骨架。</p>
+        <p class="page-description">系统管理员可在一个页面维护账号、内容和竞赛。</p>
       </div>
     </header>
 
@@ -351,12 +352,12 @@ onMounted(() => {
           </div>
         </ElTabPane>
 
-        <ElTabPane label="内容" name="content">
-          <ElEmpty description="内容管理将在后续批次接入" />
+        <ElTabPane label="内容" name="content" lazy>
+          <AdminContentPanel />
         </ElTabPane>
 
-        <ElTabPane label="竞赛" name="competitions">
-          <ElEmpty description="竞赛维护将在后续批次接入" />
+        <ElTabPane label="竞赛" name="competitions" lazy>
+          <AdminCompetitionsPanel />
         </ElTabPane>
       </ElTabs>
     </section>

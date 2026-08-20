@@ -1009,6 +1009,31 @@ a {
   white-space: pre-wrap;
 }
 
+.comment-item--hidden .comment-item__body p {
+  color: var(--mk-text-muted, #8a8a8a);
+}
+
+.comment-hidden-badge {
+  padding: 1px 8px;
+  border-radius: 999px;
+  color: #8a6d1f;
+  background: rgba(191, 150, 45, 0.14);
+  font-size: 12px;
+}
+
+.admin-section {
+  margin-bottom: 28px;
+}
+
+.admin-section > .admin-toolbar h3 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.admin-comment-hint {
+  margin-top: 4px;
+}
+
 @media (max-width: 900px) {
   .app-header__inner {
     flex-wrap: wrap;
