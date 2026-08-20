@@ -2,6 +2,7 @@
 
 from app.db.base import Base
 from app.models.artifact import Artifact, ArtifactFile, Comment, StoredFile
+from app.models.competition import Competition
 from app.models.issue import Issue
 from app.models.task import Task
 from app.models.user import User, UserSession
@@ -10,6 +11,7 @@ __all__ = [
     "Artifact",
     "ArtifactFile",
     "Base",
+    "Competition",
     "Comment",
     "Issue",
     "StoredFile",

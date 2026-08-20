@@ -39,6 +39,7 @@ def test_alembic_upgrade_from_empty_database(tmp_path: Path) -> None:
             "artifact_files",
             "artifacts",
             "comments",
+            "competitions",
             "files",
             "issues",
             "tasks",
@@ -47,7 +48,7 @@ def test_alembic_upgrade_from_empty_database(tmp_path: Path) -> None:
         }
         with engine.connect() as connection:
             assert connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == (
-                "20260819_0004"
+                "20260819_0005"
             )
     finally:
         engine.dispose()

@@ -10,6 +10,37 @@ from datetime import UTC, datetime
 from typing import Any
 
 
+# Standard LogRecord factory attributes; anything else on a record was passed
+# via ``logger.info(..., extra={...})`` and belongs in the JSON payload.
+_RESERVED_RECORD_FIELDS = frozenset(
+    {
+        "name",
+        "msg",
+        "args",
+        "levelname",
+        "levelno",
+        "pathname",
+        "filename",
+        "module",
+        "exc_info",
+        "exc_text",
+        "stack_info",
+        "lineno",
+        "funcName",
+        "created",
+        "msecs",
+        "relativeCreated",
+        "thread",
+        "threadName",
+        "processName",
+        "process",
+        "taskName",
+        "message",
+        "asctime",
+    }
+)
+
+
 class JsonFormatter(logging.Formatter):
     """Format records as one structured JSON object per line."""
 
@@ -22,9 +53,9 @@ class JsonFormatter(logging.Formatter):
         }
         if record.exc_info:
             payload["exception"] = self.formatException(record.exc_info)
-        for key in ("method", "path", "status_code", "duration_ms"):
-            if hasattr(record, key):
-                payload[key] = getattr(record, key)
+        for key, value in record.__dict__.items():
+            if key not in _RESERVED_RECORD_FIELDS and key not in payload and not key.startswith("_"):
+                payload[key] = value
         return json.dumps(payload, ensure_ascii=False, default=str)
 
 
@@ -44,3 +75,23 @@ def configure_logging(level: str = "INFO") -> None:
 
 
 logger = logging.getLogger("mkaihub")
+
+
+def log_admin_action(
+    action: str,
+    *,
+    actor_id: int,
+    target_type: str,
+    target_id: int,
+    **details: Any,
+) -> None:
+    """Emit one structured audit record for a privileged management action."""
+
+    extra: dict[str, Any] = {
+        "action": f"admin.{action}",
+        "actor_id": actor_id,
+        "target_type": target_type,
+        "target_id": target_id,
+    }
+    extra.update(details)
+    logger.info("admin.%s", action, extra=extra)

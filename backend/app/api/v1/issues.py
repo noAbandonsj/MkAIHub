@@ -12,7 +12,8 @@ from app.api.v1.deps import AuthContext, get_current_auth, require_csrf
 from app.core.errors import AppError
 from app.db.session import get_db
 from app.models import Comment, Issue
-from app.schemas.artifact import CommentCreate, CommentListResponse, CommentRead
+from app.schemas.artifact import CommentCreate, CommentListResponse, CommentRead, CommentStatus
+from app.schemas.auth import UserRole
 from app.schemas.issue import (
     IssueCreate,
     IssueListResponse,
@@ -170,7 +171,11 @@ def list_issue_comments(
     db: Session = Depends(get_db),
 ) -> CommentListResponse:
     get_issue(db, issue_id)
-    conditions = (Comment.issue_id == issue_id, Comment.status == "VISIBLE")
+    conditions = [Comment.issue_id == issue_id]
+    # Hidden comments stay visible to administrators so they can restore them.
+    if auth.user.role != UserRole.SYSTEM_ADMIN.value:
+        conditions.append(Comment.status == CommentStatus.VISIBLE.value)
+    conditions = tuple(conditions)
     total = int(db.scalar(select(func.count()).select_from(Comment).where(*conditions)) or 0)
     comments = list(
         db.scalars(

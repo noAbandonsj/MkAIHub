@@ -1,4 +1,4 @@
-"""System-administrator user-management endpoints."""
+"""System-administrator user and comment management endpoints."""
 
 from __future__ import annotations
 
@@ -9,8 +9,10 @@ from sqlalchemy.orm import Session
 
 from app.api.v1.deps import AuthContext, require_admin, require_admin_csrf
 from app.core.errors import AppError
+from app.core.logging import log_admin_action
 from app.db.session import get_db
-from app.models import User
+from app.models import Comment, User
+from app.schemas.artifact import CommentStatus
 from app.schemas.auth import (
     AdminResetPassword,
     AdminUserCreate,
@@ -59,7 +61,7 @@ def list_users(
 @router.post("/users", response_model=UserRead, status_code=status.HTTP_201_CREATED, summary="Create user")
 def create_user(
     payload: AdminUserCreate,
-    _auth: AuthContext = Depends(require_admin_csrf),
+    auth: AuthContext = Depends(require_admin_csrf),
     db: Session = Depends(get_db),
 ) -> User:
     """Create an employee or another system administrator."""
@@ -82,6 +84,14 @@ def create_user(
         db.rollback()
         raise AppError("USERNAME_TAKEN", "Username is already in use", status_code=409) from None
     db.refresh(user)
+    log_admin_action(
+        "user.create",
+        actor_id=auth.user.id,
+        target_type="user",
+        target_id=user.id,
+        username=user.username,
+        role=user.role,
+    )
     return user
 
 
@@ -89,7 +99,7 @@ def create_user(
 def update_user(
     user_id: int,
     payload: AdminUserPatch,
-    _auth: AuthContext = Depends(require_admin_csrf),
+    auth: AuthContext = Depends(require_admin_csrf),
     db: Session = Depends(get_db),
 ) -> User:
     """Update mutable user fields while protecting the current administrator."""
@@ -101,7 +111,7 @@ def update_user(
     changes = payload.model_dump(exclude_unset=True)
     if not changes:
         return user
-    if user.id == _auth.user.id:
+    if user.id == auth.user.id:
         if changes.get("is_active") is False or changes.get("role") == UserRole.EMPLOYEE:
             raise AppError(
                 "SELF_ADMIN_PROTECTED",
@@ -121,6 +131,14 @@ def update_user(
     user.updated_at = utcnow()
     db.commit()
     db.refresh(user)
+    log_admin_action(
+        "user.update",
+        actor_id=auth.user.id,
+        target_type="user",
+        target_id=user.id,
+        username=user.username,
+        fields=sorted(changes),
+    )
     return user
 
 
@@ -132,7 +150,7 @@ def update_user(
 def reset_password(
     user_id: int,
     payload: AdminResetPassword,
-    _auth: AuthContext = Depends(require_admin_csrf),
+    auth: AuthContext = Depends(require_admin_csrf),
     db: Session = Depends(get_db),
 ) -> None:
     """Reset a user's password and revoke every session for that user."""
@@ -144,3 +162,72 @@ def reset_password(
     user.updated_at = utcnow()
     revoke_all_sessions(db, user.id)
     db.commit()
+    log_admin_action(
+        "user.reset_password",
+        actor_id=auth.user.id,
+        target_type="user",
+        target_id=user.id,
+        username=user.username,
+    )
+
+
+def _get_comment(db: Session, comment_id: int) -> Comment:
+    comment = db.get(Comment, comment_id)
+    if comment is None:
+        raise AppError("COMMENT_NOT_FOUND", "Comment not found", status_code=404)
+    return comment
+
+
+def _set_comment_status(
+    db: Session,
+    comment: Comment,
+    target_status: CommentStatus,
+) -> None:
+    if comment.status != target_status.value:
+        comment.status = target_status.value
+        comment.updated_at = utcnow()
+        db.commit()
+
+
+@router.post(
+    "/comments/{comment_id}/hide",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Hide comment",
+)
+def hide_comment(
+    comment_id: int,
+    auth: AuthContext = Depends(require_admin_csrf),
+    db: Session = Depends(get_db),
+) -> None:
+    """Hide an inappropriate comment from non-administrator employees."""
+
+    comment = _get_comment(db, comment_id)
+    _set_comment_status(db, comment, CommentStatus.HIDDEN)
+    log_admin_action(
+        "comment.hide",
+        actor_id=auth.user.id,
+        target_type="comment",
+        target_id=comment.id,
+    )
+
+
+@router.post(
+    "/comments/{comment_id}/restore",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Restore comment",
+)
+def restore_comment(
+    comment_id: int,
+    auth: AuthContext = Depends(require_admin_csrf),
+    db: Session = Depends(get_db),
+) -> None:
+    """Make a previously hidden comment visible again."""
+
+    comment = _get_comment(db, comment_id)
+    _set_comment_status(db, comment, CommentStatus.VISIBLE)
+    log_admin_action(
+        "comment.restore",
+        actor_id=auth.user.id,
+        target_type="comment",
+        target_id=comment.id,
+    )
