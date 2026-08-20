@@ -1,8 +1,9 @@
-"""Artifact, attachment, and artifact-comment database models."""
+"""Artifact, attachment, and comment database models."""
 
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     Boolean,
@@ -20,6 +21,9 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
 from app.models.user import User
+
+if TYPE_CHECKING:
+    from app.models.issue import Issue
 
 
 def utcnow() -> datetime:
@@ -116,17 +120,22 @@ class ArtifactFile(Base):
 
 
 class Comment(Base):
-    """A first-version comment attached to an artifact."""
+    """A comment attached to exactly one artifact or issue."""
 
     __tablename__ = "comments"
     __table_args__ = (
         CheckConstraint("status IN ('VISIBLE', 'HIDDEN')", name="ck_comments_status"),
+        CheckConstraint("(artifact_id IS NULL) <> (issue_id IS NULL)", name="ck_comments_target"),
         Index("ix_comments_artifact_created", "artifact_id", "created_at"),
+        Index("ix_comments_issue_created", "issue_id", "created_at"),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    artifact_id: Mapped[int] = mapped_column(
-        ForeignKey("artifacts.id", ondelete="CASCADE"), nullable=False
+    artifact_id: Mapped[int | None] = mapped_column(
+        ForeignKey("artifacts.id", ondelete="CASCADE"), nullable=True
+    )
+    issue_id: Mapped[int | None] = mapped_column(
+        ForeignKey("issues.id", ondelete="CASCADE"), nullable=True
     )
     author_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
@@ -138,5 +147,6 @@ class Comment(Base):
         DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow, server_default=text("CURRENT_TIMESTAMP")
     )
 
-    artifact: Mapped[Artifact] = relationship(back_populates="comments")
+    artifact: Mapped[Artifact | None] = relationship(back_populates="comments")
+    issue: Mapped[Issue | None] = relationship(back_populates="comments")
     author: Mapped[User] = relationship()

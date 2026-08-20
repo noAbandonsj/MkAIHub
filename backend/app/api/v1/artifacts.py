@@ -21,7 +21,6 @@ from app.schemas.artifact import (
     CommentCreate,
     CommentListResponse,
     CommentRead,
-    UserSummary,
 )
 from app.services.artifacts import (
     artifact_list_item,
@@ -32,6 +31,7 @@ from app.services.artifacts import (
     require_artifact_author,
     require_author_or_admin,
 )
+from app.services.comments import comment_read
 
 
 router = APIRouter(prefix="/artifacts", tags=["artifacts"])
@@ -40,18 +40,6 @@ comment_router = APIRouter(tags=["comments"])
 
 def _state_conflict(message: str) -> AppError:
     return AppError("ARTIFACT_STATE_CONFLICT", message, status_code=409)
-
-
-def _comment_read(comment: Comment) -> CommentRead:
-    return CommentRead(
-        id=comment.id,
-        artifact_id=comment.artifact_id,
-        author=UserSummary.model_validate(comment.author),
-        content=comment.content,
-        status=comment.status,
-        created_at=comment.created_at,
-        updated_at=comment.updated_at,
-    )
 
 
 @router.get("", response_model=ArtifactListResponse, summary="List artifacts")
@@ -244,7 +232,7 @@ def list_comments(
         ).all()
     )
     return CommentListResponse(
-        items=[_comment_read(item) for item in comments],
+        items=[comment_read(item) for item in comments],
         page=page,
         page_size=page_size,
         total=total,
@@ -271,7 +259,7 @@ def create_comment(
     db.commit()
     db.refresh(comment)
     comment.author = auth.user
-    return _comment_read(comment)
+    return comment_read(comment)
 
 
 @comment_router.delete("/comments/{comment_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Delete own comment")

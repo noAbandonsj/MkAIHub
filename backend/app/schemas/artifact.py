@@ -7,6 +7,8 @@ from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.schemas.common import UtcJsonModel
+
 
 class ArtifactStatus(StrEnum):
     DRAFT = "DRAFT"
@@ -27,7 +29,7 @@ class UserSummary(BaseModel):
     display_name: str
 
 
-class FileRead(BaseModel):
+class FileRead(UtcJsonModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
@@ -95,7 +97,7 @@ class ArtifactUpdate(BaseModel):
         return value
 
 
-class ArtifactListItem(BaseModel):
+class ArtifactListItem(UtcJsonModel):
     id: int
     title: str
     summary: str
@@ -134,9 +136,10 @@ class CommentCreate(BaseModel):
         return value
 
 
-class CommentRead(BaseModel):
+class CommentRead(UtcJsonModel):
     id: int
-    artifact_id: int
+    artifact_id: int | None = None
+    issue_id: int | None = None
     author: UserSummary
     content: str
     status: CommentStatus

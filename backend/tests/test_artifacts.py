@@ -89,6 +89,7 @@ def test_artifact_attachment_publish_comment_and_visibility(client: TestClient, 
         )
         assert published.status_code == 200
         assert published.json()["status"] == "PUBLISHED"
+        assert published.json()["published_at"].endswith("Z")
 
         listing = reader.get("/api/v1/artifacts", params={"q": "提示词"})
         assert listing.status_code == 200
