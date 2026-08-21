@@ -154,6 +154,7 @@ public static class ArtifactService
         => new(
             comment.Id,
             comment.ArtifactId,
+            comment.IssueId,
             ToSummary(comment.Author!),
             comment.Content,
             comment.Status,

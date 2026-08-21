@@ -337,6 +337,94 @@ public sealed class FieldReader
         return value ?? string.Empty;
     }
 
+    /// <summary>
+    /// Required datetime that must carry a UTC offset, normalized to UTC
+    /// (pydantic datetime + "must include a UTC offset" validator).
+    /// </summary>
+    public DateTime? RequiredUtcDateTime(string field)
+    {
+        if (!_body.Has(field))
+        {
+            AddMissing(field);
+            return null;
+        }
+        return OptionalUtcDateTime(field);
+    }
+
+    /// <summary>
+    /// Optional datetime (JSON null accepted) with the same offset rules;
+    /// a null return means "absent or explicitly null" to the caller.
+    /// </summary>
+    public DateTime? OptionalUtcDateTime(string field)
+    {
+        if (!_body.Has(field))
+        {
+            return null;
+        }
+        var element = _body.Get(field)!.Value;
+        if (element.ValueKind == JsonValueKind.Null)
+        {
+            return null;
+        }
+        if (!TryReadUtcDateTime(field, element, out var value))
+        {
+            return null;
+        }
+        if (value is null)
+        {
+            Add("value_error", field, "Value error, must include a UTC offset");
+            return null;
+        }
+        return value;
+    }
+
+    /// <summary>
+    /// Parse one JSON value as an offset-bearing datetime. Returns false for
+    /// type/parse failures; a null value means the text was valid but naive.
+    /// </summary>
+    private bool TryReadUtcDateTime(string field, JsonElement element, out DateTime? value)
+    {
+        value = null;
+        string? text = null;
+        if (element.ValueKind == JsonValueKind.String)
+        {
+            text = element.GetString();
+        }
+        else if (element.ValueKind == JsonValueKind.Number)
+        {
+            // pydantic accepts unix epoch seconds and yields an aware datetime.
+            var seconds = element.GetDouble();
+            var offset = DateTimeOffset.FromUnixTimeMilliseconds((long)(seconds * 1000));
+            value = offset.UtcDateTime;
+            return true;
+        }
+        else
+        {
+            Add("datetime_type", field, "Input should be a valid datetime");
+            return false;
+        }
+
+        var styles = System.Globalization.DateTimeStyles.AllowTrailingWhite | System.Globalization.DateTimeStyles.AllowLeadingWhite;
+        if (!DateTime.TryParse(text, System.Globalization.CultureInfo.InvariantCulture, styles, out var parsed))
+        {
+            Add("datetime_parsing", field, "Input should be a valid datetime, unexpected format");
+            return false;
+        }
+        if (parsed.Kind == DateTimeKind.Unspecified)
+        {
+            // Naive text: valid datetime shape but no offset supplied.
+            value = null;
+            return true;
+        }
+        if (!DateTimeOffset.TryParse(text, System.Globalization.CultureInfo.InvariantCulture, styles, out var offsetParsed))
+        {
+            Add("datetime_parsing", field, "Input should be a valid datetime, unexpected format");
+            return false;
+        }
+        value = offsetParsed.UtcDateTime;
+        return true;
+    }
+
     public void ForbidExtraFields(params string[] knownFields)
     {
         foreach (var key in _body.Keys)

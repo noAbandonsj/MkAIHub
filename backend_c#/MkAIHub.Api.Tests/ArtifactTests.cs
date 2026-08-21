@@ -140,6 +140,34 @@ public sealed class ArtifactTests
             using var body = await listing.ReadJsonAsync();
             Assert.Equal(0, body.RootElement.GetProperty("total").GetInt32());
         }
+        // Only administrators can use a status filter to browse archived content.
+        using (var readerAgain = environment.CreateClient())
+        {
+            var readerHeadersAgain = await readerAgain.LoginAsync("reader");
+            using (var employeeArchived = await readerAgain.GetAsync("/api/v1/artifacts?status=ARCHIVED"))
+            {
+                using var body = await employeeArchived.ReadJsonAsync();
+                Assert.Equal(0, body.RootElement.GetProperty("total").GetInt32());
+            }
+        }
+        await environment.SeedUserAsync("boss", "SYSTEM_ADMIN");
+        using (var admin = environment.CreateClient())
+        {
+            var adminHeaders = await admin.LoginAsync("boss");
+            using (var adminArchived = await admin.GetAsync("/api/v1/artifacts?status=ARCHIVED"))
+            {
+                using var body = await adminArchived.ReadJsonAsync();
+                Assert.Equal(1, body.RootElement.GetProperty("total").GetInt32());
+                Assert.Equal(
+                    "ARCHIVED",
+                    body.RootElement.GetProperty("items")[0].GetProperty("status").GetString());
+            }
+            using (var adminDefault = await admin.GetAsync("/api/v1/artifacts"))
+            {
+                using var body = await adminDefault.ReadJsonAsync();
+                Assert.Equal(0, body.RootElement.GetProperty("total").GetInt32());
+            }
+        }
         using (var edit = await client.PatchJsonAsync(
             $"/api/v1/artifacts/{artifactId}",
             new { title = "归档后不可编辑" },

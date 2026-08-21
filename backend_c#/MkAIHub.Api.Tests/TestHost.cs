@@ -28,6 +28,8 @@ public sealed class TestEnvironment : IDisposable
 
     public ApiFactory Factory { get; }
 
+    public AuditSink Audit { get; } = new();
+
     public TestEnvironment()
     {
         Root = Path.Combine(Path.GetTempPath(), "mkaihub-csharp-tests", Guid.NewGuid().ToString("N"));
@@ -35,7 +37,7 @@ public sealed class TestEnvironment : IDisposable
         UploadDir = Path.Combine(Root, "uploads");
         Directory.CreateDirectory(Root);
         Migrator.UpgradeToHead(DatabasePath);
-        Factory = new ApiFactory(DatabasePath, UploadDir, Path.Combine(Root, "data"));
+        Factory = new ApiFactory(DatabasePath, UploadDir, Path.Combine(Root, "data"), Audit);
     }
 
     public HttpClient CreateClient()
@@ -86,17 +88,24 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
     private readonly string _databasePath;
     private readonly string _uploadDir;
     private readonly string _dataDir;
+    private readonly AuditSink? _audit;
 
-    public ApiFactory(string databasePath, string uploadDir, string dataDir)
+    public ApiFactory(string databasePath, string uploadDir, string dataDir, AuditSink? audit = null)
     {
         _databasePath = databasePath;
         _uploadDir = uploadDir;
         _dataDir = dataDir;
+        _audit = audit;
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("test");
+        if (_audit is not null)
+        {
+            builder.ConfigureLogging(logging =>
+                logging.AddProvider(new AuditSinkProvider(_audit)));
+        }
         builder.ConfigureAppConfiguration((_, configuration) =>
         {
             configuration.AddInMemoryCollection(new Dictionary<string, string?>
@@ -111,6 +120,97 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
                 ["FRONTEND_ORIGIN"] = "",
             });
         });
+    }
+}
+
+/// <summary>One captured admin audit record (mirrors the Python audit handler).</summary>
+public sealed record AuditRecord(
+    string Action,
+    int ActorId,
+    string TargetType,
+    int TargetId,
+    IReadOnlyDictionary<string, object?> Details);
+
+/// <summary>Captures structured admin audit records emitted by the "mkaihub" logger.</summary>
+public sealed class AuditSink
+{
+    private readonly object _gate = new();
+    private readonly List<AuditRecord> _records = new();
+
+    public IReadOnlyList<AuditRecord> Records
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return _records.ToList();
+            }
+        }
+    }
+
+    public void Add(AuditRecord record)
+    {
+        lock (_gate)
+        {
+            _records.Add(record);
+        }
+    }
+}
+
+public sealed class AuditSinkProvider : ILoggerProvider
+{
+    private readonly AuditSink _sink;
+
+    public AuditSinkProvider(AuditSink sink)
+    {
+        _sink = sink;
+    }
+
+    public ILogger CreateLogger(string categoryName) => new AuditLogger(categoryName, _sink);
+
+    public void Dispose()
+    {
+    }
+
+    private sealed class AuditLogger : ILogger
+    {
+        private readonly string _category;
+        private readonly AuditSink _sink;
+
+        public AuditLogger(string category, AuditSink sink)
+        {
+            _category = category;
+            _sink = sink;
+        }
+
+        public bool IsEnabled(LogLevel logLevel) => _category == "mkaihub";
+
+        IDisposable? ILogger.BeginScope<TState>(TState state) => null;
+
+        public void Log<TState>(
+            LogLevel logLevel,
+            EventId eventId,
+            TState state,
+            Exception? exception,
+            Func<TState, Exception?, string> formatter)
+        {
+            if (!IsEnabled(logLevel) || state is not IReadOnlyList<KeyValuePair<string, object?>> fields)
+            {
+                return;
+            }
+            var values = fields.ToDictionary(pair => pair.Key, pair => pair.Value);
+            if (!values.TryGetValue("action", out var action) || action is not string actionText
+                || !actionText.StartsWith("admin.", StringComparison.Ordinal))
+            {
+                return;
+            }
+            _sink.Add(new AuditRecord(
+                actionText,
+                values.TryGetValue("actor_id", out var actorId) && actorId is int parsedActor ? parsedActor : 0,
+                values.TryGetValue("target_type", out var targetType) && targetType is string targetText ? targetText : string.Empty,
+                values.TryGetValue("target_id", out var targetId) && targetId is int parsedTarget ? parsedTarget : 0,
+                values));
+        }
     }
 }
 

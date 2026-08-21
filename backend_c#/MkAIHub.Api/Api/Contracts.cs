@@ -70,7 +70,8 @@ public sealed record ArtifactListResponseDto(
 
 public sealed record CommentReadDto(
     int Id,
-    int ArtifactId,
+    int? ArtifactId,
+    int? IssueId,
     UserSummaryDto Author,
     string Content,
     string Status,
@@ -84,6 +85,89 @@ public sealed record CommentListResponseDto(
     int Total);
 
 public sealed record ExploreResponseDto(IReadOnlyList<ArtifactListItemDto> LatestArtifacts);
+
+public sealed record TaskListItemDto(
+    int Id,
+    string Title,
+    UserSummaryDto Creator,
+    string Status,
+    DateTime? DeadlineAt,
+    DateTime? CompletedAt,
+    DateTime? ClosedAt,
+    DateTime CreatedAt,
+    DateTime UpdatedAt);
+
+public sealed record TaskReadDto(
+    int Id,
+    string Title,
+    UserSummaryDto Creator,
+    string Status,
+    DateTime? DeadlineAt,
+    DateTime? CompletedAt,
+    DateTime? ClosedAt,
+    DateTime CreatedAt,
+    DateTime UpdatedAt,
+    string Description);
+
+public sealed record TaskListResponseDto(
+    IReadOnlyList<TaskListItemDto> Items,
+    int Page,
+    int PageSize,
+    int Total);
+
+public sealed record IssueListItemDto(
+    int Id,
+    string Title,
+    UserSummaryDto Author,
+    string Status,
+    DateTime? ClosedAt,
+    DateTime CreatedAt,
+    DateTime UpdatedAt);
+
+public sealed record IssueReadDto(
+    int Id,
+    string Title,
+    UserSummaryDto Author,
+    string Status,
+    DateTime? ClosedAt,
+    DateTime CreatedAt,
+    DateTime UpdatedAt,
+    string Description);
+
+public sealed record IssueListResponseDto(
+    IReadOnlyList<IssueListItemDto> Items,
+    int Page,
+    int PageSize,
+    int Total);
+
+public sealed record CompetitionListItemDto(
+    int Id,
+    string Title,
+    string Summary,
+    UserSummaryDto Creator,
+    string Status,
+    DateTime StartAt,
+    DateTime EndAt,
+    DateTime CreatedAt,
+    DateTime UpdatedAt);
+
+public sealed record CompetitionReadDto(
+    int Id,
+    string Title,
+    string Summary,
+    UserSummaryDto Creator,
+    string Status,
+    DateTime StartAt,
+    DateTime EndAt,
+    DateTime CreatedAt,
+    DateTime UpdatedAt,
+    string RulesMarkdown);
+
+public sealed record CompetitionListResponseDto(
+    IReadOnlyList<CompetitionListItemDto> Items,
+    int Page,
+    int PageSize,
+    int Total);
 
 /// <summary>Shared normalization rules (app.schemas.auth helpers).</summary>
 public static class AuthRules
@@ -468,5 +552,236 @@ public sealed record CommentCreate(string Content)
             throw reader.ToException();
         }
         return new CommentCreate(value!);
+    }
+}
+
+/// <summary>Shared required/optional text rules for the task schemas.</summary>
+internal static class TextFields
+{
+    public const int TitleMaxLength = 200;
+    public const int DescriptionMaxLength = 100_000;
+
+    public static string? ReadRequired(FieldReader reader, string field, int maxLength)
+    {
+        var value = reader.RequiredString(field);
+        if (value is null)
+        {
+            return null;
+        }
+        if (value.Length > maxLength)
+        {
+            reader.Add("string_too_long", field, $"String should have at most {maxLength} characters");
+            return null;
+        }
+        var stripped = value.Trim();
+        if (stripped.Length == 0)
+        {
+            reader.Add("value_error", field, "Value error, must not be blank");
+            return null;
+        }
+        return stripped;
+    }
+
+    public static string? ReadOptional(FieldReader reader, string field, int maxLength)
+    {
+        if (!reader.HasField(field))
+        {
+            return null;
+        }
+        var value = reader.OptionalString(field);
+        if (value is null)
+        {
+            return null;
+        }
+        if (value.Length > maxLength)
+        {
+            reader.Add("string_too_long", field, $"String should have at most {maxLength} characters");
+            return null;
+        }
+        var stripped = value.Trim();
+        if (stripped.Length == 0)
+        {
+            reader.Add("value_error", field, "Value error, must not be blank");
+            return null;
+        }
+        return stripped;
+    }
+}
+
+public sealed record TaskCreate(string Title, string Description, DateTime? DeadlineAt)
+{
+    public static async Task<TaskCreate> ParseAsync(HttpRequest request)
+    {
+        var body = await JsonBody.ReadAsync(request);
+        var reader = new FieldReader(body);
+        var title = TextFields.ReadRequired(reader, "title", TextFields.TitleMaxLength);
+        var description = TextFields.ReadRequired(reader, "description", TextFields.DescriptionMaxLength);
+        var deadlineAt = reader.OptionalUtcDateTime("deadline_at");
+        reader.ForbidExtraFields("title", "description", "deadline_at");
+        if (reader.HasErrors)
+        {
+            throw reader.ToException();
+        }
+        return new TaskCreate(title!, description!, deadlineAt);
+    }
+}
+
+/// <summary>Task patch: title/description may be explicitly null (rejected by the controller); deadline_at null clears it.</summary>
+public sealed record TaskUpdate(
+    string? Title,
+    bool HasTitle,
+    string? Description,
+    bool HasDescription,
+    DateTime? DeadlineAt,
+    bool HasDeadlineAt)
+{
+    public bool AnyChanges => HasTitle || HasDescription || HasDeadlineAt;
+
+    public static async Task<TaskUpdate> ParseAsync(HttpRequest request)
+    {
+        var body = await JsonBody.ReadAsync(request);
+        var reader = new FieldReader(body);
+        var title = TextFields.ReadOptional(reader, "title", TextFields.TitleMaxLength);
+        var description = TextFields.ReadOptional(reader, "description", TextFields.DescriptionMaxLength);
+        var deadlineAt = reader.OptionalUtcDateTime("deadline_at");
+        reader.ForbidExtraFields("title", "description", "deadline_at");
+        if (reader.HasErrors)
+        {
+            throw reader.ToException();
+        }
+        return new TaskUpdate(
+            title,
+            reader.HasField("title"),
+            description,
+            reader.HasField("description"),
+            deadlineAt,
+            reader.HasField("deadline_at"));
+    }
+}
+
+public sealed record IssueCreate(string Title, string Description)
+{
+    public static async Task<IssueCreate> ParseAsync(HttpRequest request)
+    {
+        var body = await JsonBody.ReadAsync(request);
+        var reader = new FieldReader(body);
+        var title = TextFields.ReadRequired(reader, "title", TextFields.TitleMaxLength);
+        var description = TextFields.ReadRequired(reader, "description", TextFields.DescriptionMaxLength);
+        reader.ForbidExtraFields("title", "description");
+        if (reader.HasErrors)
+        {
+            throw reader.ToException();
+        }
+        return new IssueCreate(title!, description!);
+    }
+}
+
+public sealed record IssueUpdate(
+    string? Title,
+    bool HasTitle,
+    string? Description,
+    bool HasDescription)
+{
+    public bool AnyChanges => HasTitle || HasDescription;
+
+    public static async Task<IssueUpdate> ParseAsync(HttpRequest request)
+    {
+        var body = await JsonBody.ReadAsync(request);
+        var reader = new FieldReader(body);
+        var title = TextFields.ReadOptional(reader, "title", TextFields.TitleMaxLength);
+        var description = TextFields.ReadOptional(reader, "description", TextFields.DescriptionMaxLength);
+        reader.ForbidExtraFields("title", "description");
+        if (reader.HasErrors)
+        {
+            throw reader.ToException();
+        }
+        return new IssueUpdate(title, reader.HasField("title"), description, reader.HasField("description"));
+    }
+}
+
+public sealed record CompetitionCreate(
+    string Title,
+    string Summary,
+    string RulesMarkdown,
+    DateTime StartAt,
+    DateTime EndAt)
+{
+    public const int TitleMaxLength = 200;
+    public const int SummaryMaxLength = 500;
+    public const int RulesMaxLength = 100_000;
+
+    public static async Task<CompetitionCreate> ParseAsync(HttpRequest request)
+    {
+        var body = await JsonBody.ReadAsync(request);
+        var reader = new FieldReader(body);
+        var title = TextFields.ReadRequired(reader, "title", TitleMaxLength);
+        var summary = TextFields.ReadRequired(reader, "summary", SummaryMaxLength);
+        var rules = TextFields.ReadRequired(reader, "rules_markdown", RulesMaxLength);
+        var startAt = reader.RequiredUtcDateTime("start_at");
+        var endAt = reader.RequiredUtcDateTime("end_at");
+        if (startAt is not null && endAt is not null && startAt >= endAt)
+        {
+            reader.Add("value_error", new[] { "body" }, "Value error, start_at must be earlier than end_at");
+        }
+        reader.ForbidExtraFields("title", "summary", "rules_markdown", "start_at", "end_at");
+        if (reader.HasErrors)
+        {
+            throw reader.ToException();
+        }
+        return new CompetitionCreate(title!, summary!, rules!, startAt!.Value, endAt!.Value);
+    }
+}
+
+public sealed record CompetitionUpdate(
+    string? Title,
+    bool HasTitle,
+    string? Summary,
+    bool HasSummary,
+    string? RulesMarkdown,
+    bool HasRulesMarkdown,
+    DateTime? StartAt,
+    bool HasStartAt,
+    DateTime? EndAt,
+    bool HasEndAt)
+{
+    public bool AnyChanges => HasTitle || HasSummary || HasRulesMarkdown || HasStartAt || HasEndAt;
+
+    public bool AnyExplicitNull =>
+        (HasTitle && Title is null)
+        || (HasSummary && Summary is null)
+        || (HasRulesMarkdown && RulesMarkdown is null)
+        || (HasStartAt && StartAt is null)
+        || (HasEndAt && EndAt is null);
+
+    public static async Task<CompetitionUpdate> ParseAsync(HttpRequest request)
+    {
+        var body = await JsonBody.ReadAsync(request);
+        var reader = new FieldReader(body);
+        var title = TextFields.ReadOptional(reader, "title", CompetitionCreate.TitleMaxLength);
+        var summary = TextFields.ReadOptional(reader, "summary", CompetitionCreate.SummaryMaxLength);
+        var rules = TextFields.ReadOptional(reader, "rules_markdown", CompetitionCreate.RulesMaxLength);
+        var startAt = reader.OptionalUtcDateTime("start_at");
+        var endAt = reader.OptionalUtcDateTime("end_at");
+        if (reader.HasField("start_at") && reader.HasField("end_at")
+            && startAt is not null && endAt is not null && startAt >= endAt)
+        {
+            reader.Add("value_error", new[] { "body" }, "Value error, start_at must be earlier than end_at");
+        }
+        reader.ForbidExtraFields("title", "summary", "rules_markdown", "start_at", "end_at");
+        if (reader.HasErrors)
+        {
+            throw reader.ToException();
+        }
+        return new CompetitionUpdate(
+            title,
+            reader.HasField("title"),
+            summary,
+            reader.HasField("summary"),
+            rules,
+            reader.HasField("rules_markdown"),
+            startAt,
+            reader.HasField("start_at"),
+            endAt,
+            reader.HasField("end_at"));
     }
 }

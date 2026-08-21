@@ -77,6 +77,8 @@ public sealed class JsonLogger : ILogger
             foreach (var field in fields)
             {
                 if (field.Key is "method" or "path" or "status_code" or "duration_ms"
+                    or "action" or "actor_id" or "target_type" or "target_id"
+                    or "username" or "role" or "fields" or "title"
                     && field.Value is not null)
                 {
                     payload[field.Key] = field.Value;
@@ -138,5 +140,39 @@ public static class LoggerExtensions
             state,
             null,
             static (_, _) => "HTTP request");
+    }
+
+    /// <summary>
+    /// Emit one structured audit record for a privileged management action,
+    /// mirroring app.core.logging.log_admin_action.
+    /// </summary>
+    public static void LogAdminAction(
+        this ILogger logger,
+        string action,
+        int actorId,
+        string targetType,
+        int targetId,
+        IReadOnlyDictionary<string, object?>? details = null)
+    {
+        var state = new List<KeyValuePair<string, object?>>
+        {
+            new("action", $"admin.{action}"),
+            new("actor_id", actorId),
+            new("target_type", targetType),
+            new("target_id", targetId),
+        };
+        if (details is not null)
+        {
+            foreach (var (key, value) in details)
+            {
+                state.Add(new(key, value));
+            }
+        }
+        logger.Log(
+            LogLevel.Information,
+            default,
+            state,
+            null,
+            (_, _) => $"admin.{action}");
     }
 }

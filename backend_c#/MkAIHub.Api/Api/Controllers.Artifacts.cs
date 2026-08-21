@@ -40,13 +40,19 @@ public sealed class ArtifactsController : ControllerBase
         {
             query = query.Where(artifact => artifact.AuthorId == auth.User.Id);
         }
+        else if (statusFilter is not null && auth.User.Role == UserRoles.SystemAdmin)
+        {
+            // Administrators maintain archived content, so an explicit status
+            // filter replaces the default published-only scope for them.
+            query = query.Where(artifact => artifact.Status == statusFilter);
+        }
         else
         {
             query = query.Where(artifact => artifact.Status == ArtifactStatuses.Published);
-        }
-        if (statusFilter is not null)
-        {
-            query = query.Where(artifact => artifact.Status == statusFilter);
+            if (statusFilter is not null)
+            {
+                query = query.Where(artifact => artifact.Status == statusFilter);
+            }
         }
         var search = q?.Trim() ?? string.Empty;
         if (search.Length > 0)
@@ -274,8 +280,12 @@ public sealed class ArtifactCommentsController : ControllerBase
 
         await _db.GetVisibleArtifactAsync(parsedId, auth.User);
         IQueryable<Comment> query = _db.Comments.Include(comment => comment.Author);
-        query = query.Where(comment =>
-            comment.ArtifactId == parsedId && comment.Status == CommentStatuses.Visible);
+        query = query.Where(comment => comment.ArtifactId == parsedId);
+        // Hidden comments stay visible to administrators so they can restore them.
+        if (auth.User.Role != UserRoles.SystemAdmin)
+        {
+            query = query.Where(comment => comment.Status == CommentStatuses.Visible);
+        }
         var total = await query.CountAsync(cancellationToken);
         var items = await query
             .OrderBy(comment => comment.CreatedAt)
