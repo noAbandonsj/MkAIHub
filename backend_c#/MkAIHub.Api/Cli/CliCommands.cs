@@ -107,9 +107,9 @@ public static class CliCommands
     {
         var options = ParseOptions(args);
         var databaseUrl = options.GetValueOrDefault("--database-url");
-        // Mirrors Settings(..., _env_file=None): .env is skipped once the URL
-        // is overridden on the command line.
-        var settings = Settings.LoadFromEnvironment(includeDotEnvFile: databaseUrl is null);
+        // Mirrors cli._resolve_settings: keep every other configured path
+        // (data/upload dirs) from .env and only swap the database URL.
+        var settings = Settings.LoadFromEnvironment();
         if (databaseUrl is not null)
         {
             settings = settings.WithDatabaseUrl(databaseUrl);
@@ -184,7 +184,7 @@ public static class CliCommands
     {
         var options = ParseOptions(args);
         var databaseUrl = options.GetValueOrDefault("--database-url");
-        var settings = Settings.LoadFromEnvironment(includeDotEnvFile: databaseUrl is null);
+        var settings = Settings.LoadFromEnvironment();
         if (databaseUrl is not null)
         {
             settings = settings.WithDatabaseUrl(databaseUrl);
@@ -207,7 +207,7 @@ public static class CliCommands
     {
         var options = ParseOptions(args);
         var databaseUrl = options.GetValueOrDefault("--database-url");
-        var settings = Settings.LoadFromEnvironment(includeDotEnvFile: databaseUrl is null);
+        var settings = Settings.LoadFromEnvironment();
         if (databaseUrl is not null)
         {
             settings = settings.WithDatabaseUrl(databaseUrl);
@@ -266,7 +266,7 @@ public static class CliCommands
     {
         var options = ParseOptions(args);
         var databaseUrl = options.GetValueOrDefault("--database-url");
-        var settings = Settings.LoadFromEnvironment(includeDotEnvFile: databaseUrl is null);
+        var settings = Settings.LoadFromEnvironment();
         if (databaseUrl is not null)
         {
             settings = settings.WithDatabaseUrl(databaseUrl);

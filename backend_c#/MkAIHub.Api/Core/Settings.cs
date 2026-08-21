@@ -121,11 +121,14 @@ public sealed class Settings
     /// <summary>Build settings from environment variables, optionally the .env file.</summary>
     public static Settings LoadFromEnvironment(bool includeDotEnvFile = true)
     {
-        var builder = new ConfigurationBuilder().AddEnvironmentVariables();
+        var builder = new ConfigurationBuilder();
         if (includeDotEnvFile)
         {
+            // Real environment variables must override .env values, matching
+            // the web host and pydantic-settings precedence.
             builder.AddDotEnvFile(Path.Combine(FindRepositoryRoot(), ".env"));
         }
+        builder.AddEnvironmentVariables();
         return FromConfiguration(builder.Build());
     }
 
