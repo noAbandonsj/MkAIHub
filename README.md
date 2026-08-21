@@ -13,6 +13,7 @@ MkAIHub 是公司内部的轻量级 AI 分享平台，用于发布、检索和�
 - 首版采用 `EMPLOYEE` 和 `SYSTEM_ADMIN` 两种角色；不开放注册，只由系统管理员维护账号。
 - 已创建 `users`、`user_sessions`、`files`、`artifacts`、`artifact_files`、`comments`、`tasks`、`issues`、`competitions` 九张表。
 - `deploy/` 已提供单应用 Dockerfile 与 Docker Compose，Vue 生产构建可由 FastAPI 托管。
+- `backend_c#/` 的 .NET 6 移植版已对齐 Python 版批次 1–5 全部接口与 CLI（任务、Issues、竞赛、管理动作、结构化日志、备份恢复），34 项 xUnit 测试通过。
 - 两份项目方案已校准知识库边界：知识库与展品类型相互独立，首版占位是主动控制范围。
 
 数据库与上传文件的备份、恢复已实现并完成一次实际恢复演练（见 `deploy/BACKUP.md`）。按首版简化决定，容器重启验证与浏览器自动化测试不纳入本仓库交付，部署环境可按文档自行执行；知识库仍是占位页。首版安全保持轻量，只实现密码哈希、服务端会话、HttpOnly Cookie、简单 CSRF、角色校验和附件的大小/扩展名基础限制，不加入来源策略、限流、设备/IP 风控、病毒扫描或复杂管理员治理。
@@ -93,6 +94,8 @@ npm run build
 - 备份与恢复：`python -m app.cli backup` / `restore` 已完成一次完整演练——备份后新增账号与改动上传目录，恢复后数据库与文件均回到备份点（记录见 `deploy/BACKUP.md`）。
 - 浏览器实际检查管理员和员工登录、刷新保留会话、创建用户、权限拦截、自助改密和中文界面通过，控制台无错误或警告。
 - `docker compose config` 通过；本机 Docker 服务未运行，因此尚未构建和启动镜像。
+- C# 版批次 6 对齐：`dotnet test` 34 项通过；`dotnet run --project MkAIHub.Api -- backup/restore` 用演示库完成一次真实备份与恢复（含上传目录）。
+- 两后端互通冒烟：C# 版直接读写 `data/batch1-integration.db`——可校验 Python 版创建的 Argon2 密码登录、读出全部业务数据，C# 写入的任务可被 Python ORM 回读一致；演示库已还原到冒烟前状态。
 
 ## 当前工作区演示账号
 
@@ -136,4 +139,4 @@ docker compose --env-file .env -f deploy/docker-compose.yml exec app python -m a
 
 展品是首版核心，目标是完成创建、编辑、发布、检索、附件和评论闭环；任务与 Issues 提供基础 CRUD/状态骨架，竞赛提供展示和管理员维护，知识库只保留占位页，探索页只聚合模块入口和最近发布的展品。首版不包含 Toolkits、Data Lab、MapOS、Agent 自动执行、复杂协作、支付、SSO/MFA、独立知识库数据模型或多节点部署。
 
-批次 0 至批次 4 已完成代码实现，包含工程基线、认证、用户管理、展品核心闭环、探索页最新展品、任务与 Issues 基础流程、竞赛展示与维护、单页管理（用户、内容、竞赛）和各列表的“只看我的”筛选。批次 5 按简化范围完成：部署配置（单容器 Dockerfile 与 Compose、卷持久化）、备份恢复命令与说明、初始化说明和回归测试；容器重启验证与浏览器自动化测试不纳入交付。
+批次 0 至批次 4 已完成代码实现，包含工程基线、认证、用户管理、展品核心闭环、探索页最新展品、任务与 Issues 基础流程、竞赛展示与维护、单页管理（用户、内容、竞赛）和各列表的“只看我的”筛选。批次 5 按简化范围完成：部署配置（单容器 Dockerfile 与 Compose、卷持久化）、备份恢复命令与说明、初始化说明和回归测试；容器重启验证与浏览器自动化测试不纳入交付。批次 6 完成 C# 移植版与 Python 版的功能对齐（任务、Issues、竞赛、管理动作、结构化日志、备份恢复），并以共用 SQLite 数据库的方式实测两后端双向互通。
