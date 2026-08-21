@@ -95,13 +95,17 @@ public sealed class DatabaseTests
                     "artifact_files",
                     "artifacts",
                     "comments",
+                    "competitions",
                     "files",
+                    "issues",
+                    "tasks",
                     "user_sessions",
                     "users",
                 },
                 tables.ToHashSet());
 
-            Assert.Equal("20260819_0003", QueryString(connection, "SELECT version_num FROM alembic_version"));
+            Assert.Equal(Migrator.Head, QueryString(connection, "SELECT version_num FROM alembic_version"));
+            Assert.Equal("20260819_0005", Migrator.Head);
         }
         finally
         {
@@ -161,6 +165,129 @@ public sealed class CliTests
             Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
             Directory.Delete(root, recursive: true);
         }
+    }
+
+    [Fact]
+    public void BackupAndRestoreRoundTripTheDatabase()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "mkaihub-csharp-tests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        var sourcePath = Path.Combine(root, "source.db");
+        var restoredPath = Path.Combine(root, "restored.db");
+        var outputDir = Path.Combine(root, "backups");
+        var uploadDir = Path.Combine(root, "uploads");
+        try
+        {
+            Migrator.UpgradeToHead(sourcePath);
+            Assert.Equal(0, MkAIHub.Api.Cli.CliCommands.CreateAdmin(
+                new[]
+                {
+                    "--database-url", $"sqlite:///{sourcePath.Replace('\\', '/')}",
+                    "--username", "backupadmin",
+                    "--display-name", "Backup Admin",
+                    "--password", "password1",
+                },
+                Console.In,
+                Console.Error));
+
+            // The CLI reads UPLOAD_DIR from the environment; point it at an
+            // isolated directory holding one file so the zip path is exercised.
+            Directory.CreateDirectory(Path.Combine(uploadDir, "2026", "08"));
+            var uploadFile = Path.Combine(uploadDir, "2026", "08", "guide.md");
+            File.WriteAllText(uploadFile, "# Internal guide");
+            var previousUploadDir = Environment.GetEnvironmentVariable("UPLOAD_DIR");
+            Environment.SetEnvironmentVariable("UPLOAD_DIR", uploadDir);
+            try
+            {
+                Assert.Equal(0, MkAIHub.Api.Cli.CliCommands.RunBackup(
+                    new[]
+                    {
+                        "--database-url", $"sqlite:///{sourcePath.Replace('\\', '/')}",
+                        "--output-dir", outputDir,
+                    },
+                    Console.Error));
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable("UPLOAD_DIR", previousUploadDir);
+            }
+            var dbBackup = Directory.GetFiles(outputDir, "mkaihub-backup-*.db").Single();
+            var uploadsBackup = Directory.GetFiles(outputDir, "mkaihub-backup-*-uploads.zip").Single();
+            using (var archive = System.IO.Compression.ZipFile.OpenRead(uploadsBackup))
+            {
+                var entry = archive.Entries.Single();
+                Assert.Equal("2026/08/guide.md", entry.FullName);
+            }
+
+            // Restore refuses to overwrite without an explicit confirmation.
+            Assert.Equal(2, MkAIHub.Api.Cli.CliCommands.RunRestore(
+                new[]
+                {
+                    "--database-url", $"sqlite:///{restoredPath.Replace('\\', '/')}",
+                    "--db-file", dbBackup,
+                },
+                Console.Error));
+
+            Assert.Equal(0, MkAIHub.Api.Cli.CliCommands.RunRestore(
+                new[]
+                {
+                    "--database-url", $"sqlite:///{restoredPath.Replace('\\', '/')}",
+                    "--db-file", dbBackup,
+                    "--yes",
+                },
+                Console.Error));
+
+            using (var connection = Database.OpenSqlite(restoredPath))
+            {
+                Assert.Equal(
+                    Migrator.Head,
+                    QueryString(connection, "SELECT version_num FROM alembic_version"));
+            }
+            var options = new Microsoft.EntityFrameworkCore.DbContextOptionsBuilder<AppDbContext>()
+                .UseSqlite(Database.ConnectionStringFor(restoredPath))
+                .Options;
+            using var db = new AppDbContext(options);
+            Assert.NotNull(db.Users.SingleOrDefault(item => item.Username == "backupadmin"));
+        }
+        finally
+        {
+            Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void RestoreRejectsACorruptBackupDatabase()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "mkaihub-csharp-tests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        var corruptPath = Path.Combine(root, "corrupt.db");
+        var restoredPath = Path.Combine(root, "restored.db");
+        try
+        {
+            File.WriteAllText(corruptPath, "this is definitely not a sqlite database");
+            Assert.Equal(2, MkAIHub.Api.Cli.CliCommands.RunRestore(
+                new[]
+                {
+                    "--database-url", $"sqlite:///{restoredPath.Replace('\\', '/')}",
+                    "--db-file", corruptPath,
+                    "--yes",
+                },
+                Console.Error));
+            Assert.False(File.Exists(restoredPath));
+        }
+        finally
+        {
+            Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    private static string QueryString(Microsoft.Data.Sqlite.SqliteConnection connection, string sql)
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = sql;
+        return (string)command.ExecuteScalar()!;
     }
 }
 

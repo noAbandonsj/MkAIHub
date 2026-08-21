@@ -12,7 +12,7 @@ using MkAIHub.Api.Data;
 if (args.Length > 0)
 {
     var command = args[0];
-    if (command is "create-admin" or "migrate" or "--help" or "-h" or "help")
+    if (command is "create-admin" or "migrate" or "backup" or "restore" or "--help" or "-h" or "help")
     {
         return CliCommands.Dispatch(args);
     }
