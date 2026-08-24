@@ -13,15 +13,19 @@ import ArtifactStatusBadge from '@/components/artifact/ArtifactStatusBadge.vue'
 import AttachmentList from '@/components/artifact/AttachmentList.vue'
 import MarkdownViewer from '@/components/artifact/MarkdownViewer.vue'
 import CommentSection from '@/components/common/CommentSection.vue'
+import StatusBadge from '@/components/common/StatusBadge.vue'
 import { routeNames } from '@/router/route-names'
 import { useSessionStore } from '@/stores/session'
 import type { ArtifactRead } from '@/types/artifact'
+import type { TaskSubmission } from '@/types/task'
 import { formatDate } from '@/utils/format'
+import { submissionStatusLabels, submissionStatusTones } from '@/utils/status'
 
 const route = useRoute()
 const router = useRouter()
 const session = useSessionStore()
 const artifact = ref<ArtifactRead | null>(null)
+const taskSources = ref<TaskSubmission[]>([])
 const loading = ref(false)
 const actionLoading = ref(false)
 const errorMessage = ref('')
@@ -39,6 +43,12 @@ async function loadArtifact(): Promise<void> {
   errorMessage.value = ''
   try {
     artifact.value = await artifactsApi.get(artifactId.value)
+    try {
+      const sources = await artifactsApi.listTaskSources(artifactId.value)
+      taskSources.value = sources.items
+    } catch {
+      taskSources.value = []
+    }
   } catch (error) {
     errorMessage.value = getApiErrorMessage(error, '展品加载失败')
   } finally {
@@ -140,6 +150,34 @@ onMounted(() => void loadArtifact())
               <span>{{ artifact.files.length }} 个</span>
             </div>
             <AttachmentList :files="artifact.files" />
+          </section>
+
+          <section v-if="taskSources.length" class="artifact-detail-section">
+            <div class="detail-section-heading">
+              <h2>任务来源</h2>
+              <span>{{ taskSources.length }} 条</span>
+            </div>
+            <ul class="task-submission-list">
+              <li v-for="source in taskSources" :key="source.id" class="task-submission-item">
+                <div class="task-submission-head">
+                  <StatusBadge
+                    :label="submissionStatusLabels[source.status]"
+                    :tone="submissionStatusTones[source.status]"
+                  />
+                  <RouterLink
+                    class="table-title-link"
+                    :to="{ name: routeNames.taskDetail, params: { id: source.task_id } }"
+                  >
+                    {{ source.task?.title ?? `任务 #${source.task_id}` }}
+                  </RouterLink>
+                  <span v-if="source.task">（{{ source.task.status === 'COMPLETED' ? '已完成' : '进行中' }}）</span>
+                </div>
+                <p class="muted-copy">
+                  {{ source.participant.display_name }} 第 {{ source.round_no }} 轮提交 ·
+                  {{ formatDate(source.submitted_at) }}
+                </p>
+              </li>
+            </ul>
           </section>
 
           <CommentSection

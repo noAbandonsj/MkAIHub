@@ -653,6 +653,11 @@ a {
   background: rgba(47, 121, 168, 0.14);
 }
 
+.status-pill.is-pending {
+  color: #8a5a12;
+  background: rgba(199, 141, 33, 0.16);
+}
+
 .status-pill.is-done {
   color: #16794b;
   background: rgba(37, 166, 100, 0.12);
@@ -1153,4 +1158,76 @@ a {
     justify-content: flex-start;
     overflow-x: auto;
   }
+}
+
+/* Task closure blocks (batch 8) */
+
+.task-submit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.task-submit-select {
+  max-width: 420px;
+}
+
+.task-submit-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.task-submission-list,
+.task-participant-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.task-submission-item {
+  border: 1px solid var(--mk-border);
+  border-radius: 10px;
+  padding: 10px 14px;
+}
+
+.task-submission-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+}
+
+.task-submission-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.task-timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.task-timeline-item {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-left: 12px;
+  border-left: 2px solid rgba(47, 121, 168, 0.25);
+}
+
+.task-participant-list li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px 0;
 }

@@ -1,19 +1,42 @@
 import type { CompetitionStatus } from '@/types/competition'
 import type { IssueStatus } from '@/types/issue'
-import type { TaskStatus } from '@/types/task'
+import type { ParticipantStatus, SubmissionStatus, TaskStatus } from '@/types/task'
 
-export type StatusTone = 'open' | 'done' | 'closed'
+export type StatusTone = 'open' | 'pending' | 'done' | 'closed'
 
 export const taskStatusLabels: Record<TaskStatus, string> = {
   OPEN: '开放',
+  IN_PROGRESS: '进行中',
+  REVIEWING: '待验收',
   COMPLETED: '已完成',
   CLOSED: '已关闭',
 }
 
 export const taskStatusTones: Record<TaskStatus, StatusTone> = {
   OPEN: 'open',
+  IN_PROGRESS: 'open',
+  REVIEWING: 'pending',
   COMPLETED: 'done',
   CLOSED: 'closed',
+}
+
+export const participantStatusLabels: Record<ParticipantStatus, string> = {
+  ACTIVE: '参与中',
+  LEFT: '已退出',
+}
+
+export const submissionStatusLabels: Record<SubmissionStatus, string> = {
+  SUBMITTED: '已提交',
+  REVISION_REQUIRED: '需修改',
+  ACCEPTED: '已验收',
+  REJECTED: '未采用',
+}
+
+export const submissionStatusTones: Record<SubmissionStatus, StatusTone> = {
+  SUBMITTED: 'pending',
+  REVISION_REQUIRED: 'open',
+  ACCEPTED: 'done',
+  REJECTED: 'closed',
 }
 
 export const issueStatusLabels: Record<IssueStatus, string> = {

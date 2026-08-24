@@ -1,4 +1,5 @@
 import { apiClient } from './client'
+import type { TaskRead } from '@/types/task'
 import type { UserRead, UserRole } from '@/types/user'
 
 export interface UserListParams {
@@ -68,6 +69,10 @@ export const adminApi = {
 
   restoreComment(commentId: number) {
     return apiClient.post<void>(`/admin/comments/${commentId}/restore`)
+  },
+
+  reopenTask(taskId: number) {
+    return apiClient.post<TaskRead>(`/admin/tasks/${taskId}/reopen`)
   },
 }
 

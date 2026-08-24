@@ -8,6 +8,7 @@ import type {
   CommentRead,
   StoredFileRead,
 } from '@/types/artifact'
+import type { ArtifactTaskSourceListResponse } from '@/types/task'
 
 export interface ArtifactListQuery {
   page?: number
@@ -66,6 +67,9 @@ export const artifactsApi = {
   },
   listComments(artifactId: number) {
     return apiClient.get<CommentListResponse>(`/artifacts/${artifactId}/comments?page_size=100`)
+  },
+  listTaskSources(artifactId: number) {
+    return apiClient.get<ArtifactTaskSourceListResponse>(`/artifacts/${artifactId}/task-submissions`)
   },
   createComment(artifactId: number, content: string) {
     return apiClient.post<CommentRead>(`/artifacts/${artifactId}/comments`, { content })

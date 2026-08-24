@@ -55,4 +55,13 @@ describe('artifact API client', () => {
     expect((init?.headers as Headers).has('Content-Type')).toBe(false)
     expect((init?.headers as Headers).get('X-CSRF-Token')).toBe('csrf-upload')
   })
+
+  it('lists the task submission sources of one artifact', async () => {
+    const fetchMock = vi.mocked(fetch)
+    fetchMock.mockResolvedValueOnce(jsonResponse({ items: [] }))
+
+    await artifactsApi.listTaskSources(12)
+
+    expect(String(fetchMock.mock.calls[0][0])).toContain('/artifacts/12/task-submissions')
+  })
 })

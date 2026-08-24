@@ -36,4 +36,15 @@ describe('admin API client', () => {
     expect(String(fetchMock.mock.calls[2][0])).toContain('/admin/comments/9/restore')
     expect(fetchMock.mock.calls[2][1]?.method).toBe('POST')
   })
+
+  it('targets the task reopen endpoint', async () => {
+    const fetchMock = vi.mocked(fetch)
+    fetchMock.mockResolvedValueOnce(jsonResponse({ csrf_token: 'csrf-admin' }))
+    fetchMock.mockResolvedValueOnce(jsonResponse({ id: 6, status: 'IN_PROGRESS' }))
+
+    await adminApi.reopenTask(6)
+
+    expect(String(fetchMock.mock.calls[1][0])).toContain('/admin/tasks/6/reopen')
+    expect(fetchMock.mock.calls[1][1]?.method).toBe('POST')
+  })
 })
