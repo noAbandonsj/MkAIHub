@@ -20,7 +20,7 @@ Vue 3 + TypeScript + Vite 前端、FastAPI + SQLAlchemy + Alembic 后端、SQLit
 
 ```text
 uv sync --locked
-uv run alembic upgrade head        # 迁移头 20260819_0005
+uv run alembic upgrade head        # 迁移头 20260819_0006（C# 版暂缓同步，停留在 0005）
 uv run python -m app.cli create-admin
 uv run pytest                       # 后端测试
 uv run uvicorn app.main:app --reload
@@ -44,7 +44,7 @@ C# 后端（在 `backend_c#/` 下执行）：`dotnet build`、`dotnet test`、
 
 ## 约定与边界
 
-- API 契约：路径 `/api/health`、`/api/v1/{auth,admin/users,admin/competitions,admin/comments,artifacts,tasks,issues,competitions,files,explore}`；字段 snake_case；UTC ISO 时间带 `Z` 后缀；错误体统一 `{code, message, details?}`。两个后端必须保持一致。
+- API 契约：路径 `/api/health`、`/api/v1/{auth,admin/users,admin/competitions,admin/comments,admin/tasks,artifacts,tasks,task-submissions,issues,competitions,files,explore}`；字段 snake_case；UTC ISO 时间带 `Z` 后缀；错误体统一 `{code, message, details?}`。第二阶段以 Python 版为准，C# 版暂缓同步。
 - 认证：服务端会话 + HttpOnly Cookie（`mkaihub_session`）+ CSRF 头 `X-CSRF-Token`；角色仅 `EMPLOYEE` / `SYSTEM_ADMIN`，不开放注册；密码 Argon2id（m=19456, t=2, p=2），两后端哈希互通。
 - Alembic 迁移文件名用日期前缀（`20260819_000N_*`）；C# 版 `MkAIHub.Api/Data/Migrator.cs` 复刻同一套 DDL 并维护 `alembic_version`，新增迁移时两处需同步。
 - 前端 Element Plus 按组件逐个引入，禁止全局整库注册；`@` 别名指向 `frontend/src`；代码风格为无分号、单引号。

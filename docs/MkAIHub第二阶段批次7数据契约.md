@@ -224,7 +224,7 @@ INDEX  ix_competition_results_rank (competition_id, rank)
 | 动作 | 执行人 | 前置状态 | 后置状态 | 失败条件 |
 |---|---|---|---|---|
 | 创建任务（现有接口） | 登录员工 | — | `OPEN` | 不变 |
-| 编辑任务（现有接口） | 发布人 | `OPEN` | 不变 | 非 `OPEN` → `TASK_STATE_CONFLICT` |
+| 编辑任务（现有接口） | 发布人 | 非终态（`OPEN` / `IN_PROGRESS` / `REVIEWING`） | 不变 | 终态 → `TASK_STATE_CONFLICT` |
 | 领取任务 | 任何登录员工 | 非终态（`OPEN` / `IN_PROGRESS` / `REVIEWING`） | 首个有效参与把 `OPEN` 翻为 `IN_PROGRESS`；`REVIEWING` 下领取不改变任务状态 | 任务终态 → `TASK_STATE_CONFLICT`；已有 `ACTIVE` 参与 → `TASK_ALREADY_PARTICIPATED` |
 | 退出参与 | 参与人本人 | 任务非终态且本人无任何提交 | 参与行 `LEFT`，记 `left_at`；无其他 `ACTIVE` 参与人时不回退任务状态 | 已有提交 → `TASK_SUBMISSION_EXISTS`；任务终态 → `TASK_STATE_CONFLICT` |
 | 提交/重新提交 | `ACTIVE` 参与人 | 任务非终态，且无当前提交或当前提交为 `REVISION_REQUIRED`；展品为本人 `PUBLISHED` 展品 | 新提交行 `SUBMITTED` 且 `is_current=true`，旧当前行置 `false`；任务进入 `REVIEWING` | 非参与人 → `FORBIDDEN`；任务终态 → `TASK_STATE_CONFLICT`；当前提交为 `SUBMITTED` 或 `ACCEPTED` → `SUBMISSION_ALREADY_PENDING`；展品非本人或非 `PUBLISHED` → `ARTIFACT_NOT_SUBMITTABLE` |
@@ -232,7 +232,7 @@ INDEX  ix_competition_results_rank (competition_id, rank)
 | 验收 | 发布人或管理员 | 当前提交为 `SUBMITTED` 或 `REVISION_REQUIRED` | 提交 `ACCEPTED`，记 `decided_at`、`decider_id`、`decision_note` | 同上 |
 | 拒绝（不采用） | 发布人或管理员 | 当前提交为 `SUBMITTED` 或 `REVISION_REQUIRED` | 提交 `REJECTED`，记 `decided_at` 等 | 同上 |
 | 完成任务（现有接口扩展） | 发布人 | `IN_PROGRESS` / `REVIEWING` 且存在至少一条 `ACCEPTED` 提交 | `COMPLETED`，记 `completed_at` | 无已验收提交 → `TASK_NO_ACCEPTED_RESULT`；非 `IN_PROGRESS`/`REVIEWING` → `TASK_STATE_CONFLICT`；非发布人 → `FORBIDDEN` |
-| 关闭任务（现有接口扩展） | 发布人或管理员 | 非 `CLOSED` | `CLOSED`，记 `closed_at` | 已 `CLOSED` → `TASK_STATE_CONFLICT` |
+| 关闭任务（现有接口扩展） | 发布人或管理员 | 非终态（`OPEN` / `IN_PROGRESS` / `REVIEWING`） | `CLOSED`，记 `closed_at` | 终态（`COMPLETED` / `CLOSED`）→ `TASK_STATE_CONFLICT` |
 | 重开任务（新增） | 管理员 | `CLOSED` | 存在 `ACTIVE` 参与人 → `IN_PROGRESS`，否则 `OPEN`；记录管理日志 | `COMPLETED` 不可重开 → `TASK_STATE_CONFLICT` |
 
 `REVIEWING` 与 `IN_PROGRESS` 的重算规则（服务层在每个提交动作与决定动作后执行）：
@@ -335,11 +335,16 @@ POST   /api/v1/task-submissions/{submission_id}/reject           拒绝 {note} �
 
 现有接口的行为变更：
 
-- `GET /api/v1/tasks`：新增查询参数 `participated=true`（我参与的）与 `pending_review=true`（待我验收的，即我为发布人且存在待处理提交）；列表项新增 `competition_id`、`competition_title`。
+- `GET /api/v1/tasks`：新增查询参数 `participated=true`（我参与的）与 `pending_review=true`（待我验收的，即我为发布人且存在待处理提交）；列表项新增 `competition_id`、`competition_title`（随批次9的 `tasks` 竞赛列一并交付）。
 - `GET /api/v1/tasks/{task_id}`：响应新增竞赛摘要（属竞赛任务时）、`my_participation`、参与数与提交统计。
 - `POST /api/v1/tasks/{task_id}/complete`：按 4.1 节新规则（要求存在已验收提交，允许从 `IN_PROGRESS`/`REVIEWING` 完成）。
-- `POST /api/v1/tasks/{task_id}/close`：允许从任意非 `CLOSED` 状态关闭；新增管理员重开动作 `POST /api/v1/admin/tasks/{task_id}/reopen`。
+- `POST /api/v1/tasks/{task_id}/close`：允许从非终态关闭；新增管理员重开动作 `POST /api/v1/admin/tasks/{task_id}/reopen`。
 - `POST /api/v1/tasks`（创建）：不接收 `competition_id`，竞赛任务只能经 7.2 创建。
+- 批次8实施时补充的端点与规则修订：
+  - `GET /api/v1/artifacts/{artifact_id}/task-submissions`：展品的任务提交来源列表，本人见全部轮次，他人只见 `ACCEPTED` 轮次；响应复用提交模型并附任务摘要（`task.id/title/status`）。
+  - 编辑任务的前置状态从仅 `OPEN` 放宽为非终态（`OPEN`/`IN_PROGRESS`/`REVIEWING`）。
+  - 关闭任务的前置状态收窄为非终态，`COMPLETED` 任务不可再关闭。
+  - `complete` 先校验"存在已验收提交"再校验任务状态：无验收成果时即使状态不符也返回 `TASK_NO_ACCEPTED_RESULT`。
 
 ### 7.2 竞赛域（批次9）
 
