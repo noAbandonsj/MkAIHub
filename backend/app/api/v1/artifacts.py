@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session, joinedload
 from app.api.v1.deps import AuthContext, get_current_auth, require_csrf
 from app.core.errors import AppError
 from app.db.session import get_db
-from app.models import Artifact, Comment
+from app.models import Artifact, Comment, TaskParticipant, TaskSubmission
 from app.schemas.artifact import (
     ArtifactCreate,
     ArtifactListResponse,
@@ -24,6 +24,8 @@ from app.schemas.artifact import (
     CommentStatus,
 )
 from app.schemas.auth import UserRole
+from app.schemas.task import ArtifactTaskSourceListResponse
+from app.services import task_closure
 from app.services.artifacts import (
     artifact_list_item,
     artifact_load_options,
@@ -120,6 +122,34 @@ def get_artifact(
     db: Session = Depends(get_db),
 ) -> ArtifactRead:
     return artifact_read(get_visible_artifact(db, artifact_id, auth.user))
+
+
+@router.get("/{artifact_id}/task-submissions", response_model=ArtifactTaskSourceListResponse, summary="List artifact task sources")
+def list_artifact_task_sources(
+    artifact_id: int,
+    auth: AuthContext = Depends(get_current_auth),
+    db: Session = Depends(get_db),
+) -> ArtifactTaskSourceListResponse:
+    """Show which tasks reference this artifact; others see accepted rounds only."""
+
+    artifact = get_visible_artifact(db, artifact_id, auth.user)
+    submissions = list(
+        db.scalars(
+            select(TaskSubmission)
+            .join(TaskParticipant, TaskSubmission.participant_id == TaskParticipant.id)
+            .where(
+                TaskSubmission.artifact_id == artifact.id,
+                or_(
+                    TaskParticipant.user_id == auth.user.id,
+                    TaskSubmission.status == task_closure.ACCEPTED,
+                ),
+            )
+            .order_by(TaskSubmission.submitted_at.desc(), TaskSubmission.id.desc())
+        ).all()
+    )
+    return ArtifactTaskSourceListResponse(
+        items=[task_closure.submission_read(item, include_task=True) for item in submissions]
+    )
 
 
 @router.patch("/{artifact_id}", response_model=ArtifactRead, summary="Update artifact")

@@ -50,15 +50,20 @@ def test_task_lifecycle_and_permissions(client: TestClient, test_settings) -> No
     finally:
         other.close()
 
-    completed = client.post(f"/api/v1/tasks/{task_id}/complete", headers=creator_headers)
-    assert completed.status_code == 200
-    assert completed.json()["status"] == "COMPLETED"
-    assert completed.json()["completed_at"] is not None
-    assert completed.json()["completed_at"].endswith("Z")
+    # Completion now requires an accepted submission (closed-loop rule).
+    premature = client.post(f"/api/v1/tasks/{task_id}/complete", headers=creator_headers)
+    assert premature.status_code == 409
+    assert premature.json()["code"] == "TASK_NO_ACCEPTED_RESULT"
+
+    closed = client.post(f"/api/v1/tasks/{task_id}/close", headers=creator_headers)
+    assert closed.status_code == 200
+    assert closed.json()["status"] == "CLOSED"
+    assert closed.json()["closed_at"] is not None
+    assert closed.json()["closed_at"].endswith("Z")
     assert client.patch(
         f"/api/v1/tasks/{task_id}",
         headers=creator_headers,
-        json={"title": "完成后不可编辑"},
+        json={"title": "关闭后不可编辑"},
     ).status_code == 409
     assert client.post(f"/api/v1/tasks/{task_id}/complete", headers=creator_headers).status_code == 409
     assert client.post(f"/api/v1/tasks/{task_id}/close", headers=creator_headers).status_code == 409
@@ -85,7 +90,7 @@ def test_task_lifecycle_and_permissions(client: TestClient, test_settings) -> No
     assert listing.json()["total"] == 2
     assert client.get("/api/v1/tasks", params={"mine": True}).json()["total"] == 2
     assert client.get("/api/v1/tasks", params={"status": "OPEN"}).json()["total"] == 0
-    assert client.get("/api/v1/tasks", params={"status": "COMPLETED"}).json()["total"] == 1
+    assert client.get("/api/v1/tasks", params={"status": "CLOSED"}).json()["total"] == 2
     assert client.get("/api/v1/tasks", params={"q": "管理员"}).json()["total"] == 1
     detail = client.get(f"/api/v1/tasks/{task_id}")
     assert detail.json()["description"]

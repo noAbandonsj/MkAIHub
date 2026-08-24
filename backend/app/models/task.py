@@ -26,7 +26,10 @@ class Task(Base):
 
     __tablename__ = "tasks"
     __table_args__ = (
-        CheckConstraint("status IN ('OPEN', 'COMPLETED', 'CLOSED')", name="ck_tasks_status"),
+        CheckConstraint(
+            "status IN ('OPEN', 'IN_PROGRESS', 'REVIEWING', 'COMPLETED', 'CLOSED')",
+            name="ck_tasks_status",
+        ),
         Index("ix_tasks_status_updated", "status", "updated_at"),
         Index("ix_tasks_creator_updated", "creator_id", "updated_at"),
     )

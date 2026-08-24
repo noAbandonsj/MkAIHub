@@ -9,6 +9,7 @@ from app.api.v1.competitions import admin_router as admin_competitions_router, r
 from app.api.v1.explore import router as explore_router
 from app.api.v1.files import router as files_router
 from app.api.v1.issues import router as issues_router
+from app.api.v1.task_submissions import router as task_submissions_router
 from app.api.v1.tasks import router as tasks_router
 
 
@@ -21,6 +22,7 @@ router.include_router(comment_router)
 router.include_router(files_router)
 router.include_router(explore_router)
 router.include_router(tasks_router)
+router.include_router(task_submissions_router)
 router.include_router(issues_router)
 router.include_router(competitions_router)
 

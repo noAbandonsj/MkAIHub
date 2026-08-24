@@ -13,8 +13,25 @@ from app.schemas.common import UtcJsonModel
 
 class TaskStatus(StrEnum):
     OPEN = "OPEN"
+    IN_PROGRESS = "IN_PROGRESS"
+    REVIEWING = "REVIEWING"
     COMPLETED = "COMPLETED"
     CLOSED = "CLOSED"
+
+
+TERMINAL_TASK_STATUSES = (TaskStatus.COMPLETED, TaskStatus.CLOSED)
+
+
+class ParticipantStatus(StrEnum):
+    ACTIVE = "ACTIVE"
+    LEFT = "LEFT"
+
+
+class SubmissionStatus(StrEnum):
+    SUBMITTED = "SUBMITTED"
+    REVISION_REQUIRED = "REVISION_REQUIRED"
+    ACCEPTED = "ACCEPTED"
+    REJECTED = "REJECTED"
 
 
 class TaskCreate(BaseModel):
@@ -81,8 +98,20 @@ class TaskListItem(UtcJsonModel):
     updated_at: datetime
 
 
+class TaskParticipantRead(UtcJsonModel):
+    id: int
+    task_id: int
+    user: UserSummary
+    status: ParticipantStatus
+    joined_at: datetime
+    left_at: datetime | None
+
+
 class TaskRead(TaskListItem):
     description: str
+    my_participation: TaskParticipantRead | None = None
+    participant_count: int = 0
+    submission_count: int = 0
 
 
 class TaskListResponse(BaseModel):
@@ -90,3 +119,99 @@ class TaskListResponse(BaseModel):
     page: int
     page_size: int
     total: int
+
+
+class TaskParticipantListResponse(BaseModel):
+    items: list[TaskParticipantRead]
+
+
+class SubmissionArtifactSummary(BaseModel):
+    id: int
+    title: str
+    status: str
+
+
+class SubmissionTaskSummary(BaseModel):
+    id: int
+    title: str
+    status: TaskStatus
+
+
+class TaskSubmissionRead(UtcJsonModel):
+    id: int
+    task_id: int
+    participant_id: int
+    participant: UserSummary
+    artifact: SubmissionArtifactSummary
+    round_no: int
+    note: str | None
+    status: SubmissionStatus
+    is_current: bool
+    submitted_at: datetime
+    revision_requested_at: datetime | None
+    decided_at: datetime | None
+    decider: UserSummary | None = None
+    decision_note: str | None
+    task: SubmissionTaskSummary | None = None
+
+
+class TaskSubmissionListResponse(BaseModel):
+    items: list[TaskSubmissionRead]
+    page: int
+    page_size: int
+    total: int
+
+
+class ArtifactTaskSourceListResponse(BaseModel):
+    items: list[TaskSubmissionRead]
+
+
+class TaskSubmissionCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    artifact_id: int
+    note: str | None = Field(default=None, max_length=2_000)
+
+    @field_validator("note")
+    @classmethod
+    def strip_note(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        value = value.strip()
+        return value or None
+
+
+def _require_nonblank_note(value: str) -> str:
+    value = value.strip()
+    if not value:
+        raise ValueError("must not be blank")
+    return value
+
+
+class SubmissionRevisionRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    note: str = Field(min_length=1, max_length=2_000)
+
+    @field_validator("note")
+    @classmethod
+    def strip_note(cls, value: str) -> str:
+        return _require_nonblank_note(value)
+
+
+class SubmissionAcceptRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    note: str | None = Field(default=None, max_length=2_000)
+
+    @field_validator("note")
+    @classmethod
+    def strip_note(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        value = value.strip()
+        return value or None
+
+
+class SubmissionRejectRequest(SubmissionRevisionRequest):
+    pass

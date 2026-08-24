@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session, joinedload
 
 from app.core.errors import AppError
-from app.models import Task, User
+from app.models import Task, TaskParticipant, TaskSubmission, User
 from app.schemas.auth import UserRole
 from app.schemas.artifact import UserSummary
-from app.schemas.task import TaskListItem, TaskRead
+from app.schemas.task import TaskListItem, TaskParticipantRead, TaskRead
 
 
 def get_task(db: Session, task_id: int) -> Task:
@@ -45,8 +45,44 @@ def task_list_item(task: Task) -> TaskListItem:
     )
 
 
-def task_read(task: Task) -> TaskRead:
+def task_read(db: Session, task: Task, viewer: User | None = None) -> TaskRead:
+    participant_count = int(
+        db.scalar(
+            select(func.count())
+            .select_from(TaskParticipant)
+            .where(TaskParticipant.task_id == task.id, TaskParticipant.status == "ACTIVE")
+        )
+        or 0
+    )
+    submission_count = int(
+        db.scalar(
+            select(func.count())
+            .select_from(TaskSubmission)
+            .where(TaskSubmission.task_id == task.id)
+        )
+        or 0
+    )
+    my_participation: TaskParticipantRead | None = None
+    if viewer is not None:
+        participant = db.scalar(
+            select(TaskParticipant).where(
+                TaskParticipant.task_id == task.id,
+                TaskParticipant.user_id == viewer.id,
+            )
+        )
+        if participant is not None:
+            my_participation = TaskParticipantRead(
+                id=participant.id,
+                task_id=participant.task_id,
+                user=UserSummary.model_validate(participant.user),
+                status=participant.status,
+                joined_at=participant.joined_at,
+                left_at=participant.left_at,
+            )
     return TaskRead(
         **task_list_item(task).model_dump(),
         description=task.description,
+        my_participation=my_participation,
+        participant_count=participant_count,
+        submission_count=submission_count,
     )

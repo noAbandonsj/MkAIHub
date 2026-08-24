@@ -23,6 +23,9 @@ from app.schemas.auth import (
 )
 from app.services.security import hash_password
 from app.services.sessions import revoke_all_sessions, utcnow
+from app.services import task_closure
+from app.services.tasks import get_task, task_read
+from app.schemas.task import TaskRead
 
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -231,3 +234,23 @@ def restore_comment(
         target_type="comment",
         target_id=comment.id,
     )
+
+
+@router.post("/tasks/{task_id}/reopen", response_model=TaskRead, summary="Reopen closed task")
+def reopen_task(
+    task_id: int,
+    auth: AuthContext = Depends(require_admin_csrf),
+    db: Session = Depends(get_db),
+) -> TaskRead:
+    """Reopen a closed task for correction; completed tasks stay terminal."""
+
+    task = get_task(db, task_id)
+    task_closure.reopen_task(db, task)
+    log_admin_action(
+        "task.reopen",
+        actor_id=auth.user.id,
+        target_type="task",
+        target_id=task.id,
+        status=task.status,
+    )
+    return task_read(db, task, viewer=auth.user)

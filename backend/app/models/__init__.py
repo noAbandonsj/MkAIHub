@@ -5,6 +5,7 @@ from app.models.artifact import Artifact, ArtifactFile, Comment, StoredFile
 from app.models.competition import Competition
 from app.models.issue import Issue
 from app.models.task import Task
+from app.models.task_closure import TaskParticipant, TaskSubmission
 from app.models.user import User, UserSession
 
 __all__ = [
@@ -16,6 +17,8 @@ __all__ = [
     "Issue",
     "StoredFile",
     "Task",
+    "TaskParticipant",
+    "TaskSubmission",
     "User",
     "UserSession",
 ]
