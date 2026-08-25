@@ -11,7 +11,8 @@ from sqlalchemy.orm import Session, joinedload
 from app.api.v1.deps import AuthContext, get_current_auth, require_csrf
 from app.core.errors import AppError
 from app.db.session import get_db
-from app.models import Task, TaskParticipant, TaskSubmission
+from app.models import Competition, Task, TaskParticipant, TaskSubmission
+from app.schemas.auth import UserRole
 from app.schemas.task import (
     TaskCreate,
     TaskListResponse,
@@ -70,6 +71,10 @@ def list_tasks(
         )
     if status_filter is not None:
         conditions.append(Task.status == status_filter.value)
+    if auth.user.role != UserRole.SYSTEM_ADMIN.value:
+        # Tasks of DRAFT competitions follow the competition visibility rule.
+        draft_competition_ids = select(Competition.id).where(Competition.status == "DRAFT")
+        conditions.append(~Task.competition_id.in_(draft_competition_ids))
     search = q.strip() if q else ""
     if search:
         pattern = f"%{search}%"
@@ -78,7 +83,7 @@ def list_tasks(
     count_statement = select(func.count()).select_from(Task).where(*conditions)
     statement = (
         select(Task)
-        .options(joinedload(Task.creator))
+        .options(joinedload(Task.creator), joinedload(Task.competition))
         .where(*conditions)
         .order_by(Task.updated_at.desc(), Task.id.desc())
         .offset((page - 1) * page_size)
@@ -118,7 +123,7 @@ def get_task_endpoint(
     auth: AuthContext = Depends(get_current_auth),
     db: Session = Depends(get_db),
 ) -> TaskRead:
-    return task_read(db, get_task(db, task_id), viewer=auth.user)
+    return task_read(db, get_task(db, task_id, viewer=auth.user), viewer=auth.user)
 
 
 @router.patch("/{task_id}", response_model=TaskRead, summary="Update task")
@@ -128,7 +133,7 @@ def update_task(
     auth: AuthContext = Depends(require_csrf),
     db: Session = Depends(get_db),
 ) -> TaskRead:
-    task = get_task(db, task_id)
+    task = get_task(db, task_id, viewer=auth.user)
     require_task_creator(task, auth.user)
     if task.status in TERMINAL_STATUSES:
         raise _state_conflict("A finished task cannot be edited")
@@ -153,7 +158,7 @@ def complete_task(
     auth: AuthContext = Depends(require_csrf),
     db: Session = Depends(get_db),
 ) -> TaskRead:
-    task = get_task(db, task_id)
+    task = get_task(db, task_id, viewer=auth.user)
     task_closure.complete_task(db, task, auth.user)
     return task_read(db, task, viewer=auth.user)
 
@@ -164,7 +169,7 @@ def close_task(
     auth: AuthContext = Depends(require_csrf),
     db: Session = Depends(get_db),
 ) -> TaskRead:
-    task = get_task(db, task_id)
+    task = get_task(db, task_id, viewer=auth.user)
     task_closure.close_task(db, task, auth.user)
     return task_read(db, task, viewer=auth.user)
 
@@ -175,7 +180,7 @@ def join_task(
     auth: AuthContext = Depends(require_csrf),
     db: Session = Depends(get_db),
 ):
-    task = get_task(db, task_id)
+    task = get_task(db, task_id, viewer=auth.user)
     participant = task_closure.join_task(db, task, auth.user)
     return task_closure.participant_read(participant)
 
@@ -186,7 +191,7 @@ def leave_task(
     auth: AuthContext = Depends(require_csrf),
     db: Session = Depends(get_db),
 ):
-    task = get_task(db, task_id)
+    task = get_task(db, task_id, viewer=auth.user)
     participant = task_closure.leave_task(db, task, auth.user)
     return task_closure.participant_read(participant)
 
@@ -197,7 +202,7 @@ def list_participants(
     auth: AuthContext = Depends(get_current_auth),
     db: Session = Depends(get_db),
 ) -> TaskParticipantListResponse:
-    get_task(db, task_id)
+    get_task(db, task_id, viewer=auth.user)
     participants = list(
         db.scalars(
             select(TaskParticipant)
@@ -217,7 +222,7 @@ def list_task_submissions(
     auth: AuthContext = Depends(get_current_auth),
     db: Session = Depends(get_db),
 ) -> TaskSubmissionListResponse:
-    task = get_task(db, task_id)
+    task = get_task(db, task_id, viewer=auth.user)
     conditions = [TaskSubmission.task_id == task_id]
     if not task_closure.can_view_all_submissions(task, auth.user):
         conditions.append(task_closure.task_submission_visibility(task, auth.user))
@@ -232,7 +237,7 @@ def list_task_submissions(
     total = int(db.scalar(count_statement) or 0)
     submissions = list(db.scalars(statement).all())
     return TaskSubmissionListResponse(
-        items=[task_closure.submission_read(item) for item in submissions],
+        items=[task_closure.submission_read(db, item, viewer=auth.user) for item in submissions],
         page=page,
         page_size=page_size,
         total=total,
@@ -246,6 +251,6 @@ def submit_to_task(
     auth: AuthContext = Depends(require_csrf),
     db: Session = Depends(get_db),
 ):
-    task = get_task(db, task_id)
+    task = get_task(db, task_id, viewer=auth.user)
     submission = task_closure.create_submission(db, task, auth.user, payload.artifact_id, payload.note)
-    return task_closure.submission_read(submission)
+    return task_closure.submission_read(db, submission, viewer=auth.user)

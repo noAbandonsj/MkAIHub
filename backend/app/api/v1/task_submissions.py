@@ -1,21 +1,22 @@
-"""Decision actions on task submissions (revision, accept, reject)."""
+"""Decision actions on task submissions (revision, accept, reject, review)."""
 
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from app.api.v1.deps import AuthContext, require_csrf
+from app.api.v1.deps import AuthContext, require_admin_csrf, require_csrf
 from app.core.logging import log_admin_action
 from app.db.session import get_db
 from app.schemas.auth import UserRole
+from app.schemas.competition import CompetitionReviewRequest
 from app.schemas.task import (
     SubmissionAcceptRequest,
     SubmissionRejectRequest,
     SubmissionRevisionRequest,
     TaskSubmissionRead,
 )
-from app.services import task_closure
+from app.services import competition_closure, task_closure
 
 
 router = APIRouter(prefix="/task-submissions", tags=["task-submissions"])
@@ -44,7 +45,7 @@ def request_revision(
     submission = task_closure.get_submission(db, submission_id)
     updated = task_closure.decide_submission(db, submission, auth.user, "request_revision", payload.note)
     _log_admin_decision("request_revision", updated, auth.user)
-    return task_closure.submission_read(updated)
+    return task_closure.submission_read(db, updated, viewer=auth.user)
 
 
 @router.post("/{submission_id}/accept", response_model=TaskSubmissionRead, summary="Accept submission")
@@ -58,7 +59,7 @@ def accept_submission(
     note = payload.note if payload is not None else None
     updated = task_closure.decide_submission(db, submission, auth.user, "accept", note)
     _log_admin_decision("accept", updated, auth.user)
-    return task_closure.submission_read(updated)
+    return task_closure.submission_read(db, updated, viewer=auth.user)
 
 
 @router.post("/{submission_id}/reject", response_model=TaskSubmissionRead, summary="Reject submission")
@@ -71,4 +72,28 @@ def reject_submission(
     submission = task_closure.get_submission(db, submission_id)
     updated = task_closure.decide_submission(db, submission, auth.user, "reject", payload.note)
     _log_admin_decision("reject", updated, auth.user)
-    return task_closure.submission_read(updated)
+    return task_closure.submission_read(db, updated, viewer=auth.user)
+
+
+@router.post("/{submission_id}/competition-review", response_model=TaskSubmissionRead, summary="Review competition submission")
+def review_competition_submission(
+    submission_id: int,
+    payload: CompetitionReviewRequest,
+    auth: AuthContext = Depends(require_admin_csrf),
+    db: Session = Depends(get_db),
+) -> TaskSubmissionRead:
+    """Upsert the official score of a current competition submission round."""
+
+    submission = task_closure.get_submission(db, submission_id)
+    review, created = competition_closure.review_competition_submission(
+        db, submission, auth.user, payload.raw_score, payload.comment
+    )
+    log_admin_action(
+        "competition_review.create" if created else "competition_review.update",
+        actor_id=auth.user.id,
+        target_type="task_submission",
+        target_id=submission.id,
+        task_id=submission.task_id,
+        raw_score=f"{payload.raw_score:.2f}",
+    )
+    return task_closure.submission_read(db, submission, viewer=auth.user)

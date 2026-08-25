@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from decimal import Decimal
 from enum import StrEnum
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator
 
 from app.schemas.artifact import UserSummary
 from app.schemas.common import UtcJsonModel
@@ -91,6 +92,8 @@ class TaskListItem(UtcJsonModel):
     title: str
     creator: UserSummary
     status: TaskStatus
+    competition_id: int | None = None
+    competition_title: str | None = None
     deadline_at: datetime | None
     completed_at: datetime | None
     closed_at: datetime | None
@@ -131,10 +134,29 @@ class SubmissionArtifactSummary(BaseModel):
     status: str
 
 
+class TaskCompetitionSummary(BaseModel):
+    id: int
+    title: str
+    lifecycle_status: str
+
+
 class SubmissionTaskSummary(BaseModel):
     id: int
     title: str
     status: TaskStatus
+    competition: TaskCompetitionSummary | None = None
+
+
+class SubmissionReviewSummary(UtcJsonModel):
+    raw_score: Decimal
+    comment: str | None
+    reviewed_at: datetime
+    reviewer: UserSummary
+
+    @field_serializer("raw_score", when_used="json")
+    @classmethod
+    def serialize_raw_score(cls, value: Decimal) -> str:
+        return f"{value:.2f}"
 
 
 class TaskSubmissionRead(UtcJsonModel):
@@ -153,6 +175,9 @@ class TaskSubmissionRead(UtcJsonModel):
     decider: UserSummary | None = None
     decision_note: str | None
     task: SubmissionTaskSummary | None = None
+    competition_review: SubmissionReviewSummary | None = None
+    competition_rank: int | None = None
+    competition_award: str | None = None
 
 
 class TaskSubmissionListResponse(BaseModel):

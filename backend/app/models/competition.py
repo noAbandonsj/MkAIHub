@@ -18,6 +18,10 @@ class Competition(Base):
     __tablename__ = "competitions"
     __table_args__ = (
         CheckConstraint("start_at < end_at", name="ck_competitions_window"),
+        CheckConstraint(
+            "status IN ('DRAFT', 'PUBLISHED', 'RESULT_PUBLISHED', 'ARCHIVED')",
+            name="ck_competitions_status",
+        ),
         Index("ix_competitions_start_end", "start_at", "end_at"),
     )
 
@@ -27,6 +31,9 @@ class Competition(Base):
     rules_markdown: Mapped[str] = mapped_column(Text, nullable=False)
     start_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     end_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    # Operational lifecycle answering "is the content public, are results out";
+    # the derived UPCOMING/ONGOING/ENDED display state stays computed from time.
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="DRAFT", server_default="PUBLISHED")
     created_by: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=utcnow, server_default=text("CURRENT_TIMESTAMP")

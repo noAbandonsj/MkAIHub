@@ -12,11 +12,26 @@ from app.schemas.artifact import UserSummary
 from app.schemas.task import TaskListItem, TaskParticipantRead, TaskRead
 
 
-def get_task(db: Session, task_id: int) -> Task:
+def _is_admin(user: User) -> bool:
+    return user.role == UserRole.SYSTEM_ADMIN.value
+
+
+def get_task(db: Session, task_id: int, viewer: User | None = None) -> Task:
+    """Load a task; tasks under DRAFT competitions stay invisible to employees."""
+
     task = db.scalar(
-        select(Task).options(joinedload(Task.creator)).where(Task.id == task_id)
+        select(Task)
+        .options(joinedload(Task.creator), joinedload(Task.competition))
+        .where(Task.id == task_id)
     )
     if task is None:
+        raise AppError("TASK_NOT_FOUND", "Task not found", status_code=404)
+    if (
+        viewer is not None
+        and task.competition_id is not None
+        and not _is_admin(viewer)
+        and (task.competition is None or task.competition.status == "DRAFT")
+    ):
         raise AppError("TASK_NOT_FOUND", "Task not found", status_code=404)
     return task
 
@@ -37,6 +52,8 @@ def task_list_item(task: Task) -> TaskListItem:
         title=task.title,
         creator=UserSummary.model_validate(task.creator),
         status=task.status,
+        competition_id=task.competition_id,
+        competition_title=task.competition.title if task.competition is not None else None,
         deadline_at=task.deadline_at,
         completed_at=task.completed_at,
         closed_at=task.closed_at,

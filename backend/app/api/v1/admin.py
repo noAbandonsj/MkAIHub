@@ -244,7 +244,7 @@ def reopen_task(
 ) -> TaskRead:
     """Reopen a closed task for correction; completed tasks stay terminal."""
 
-    task = get_task(db, task_id)
+    task = get_task(db, task_id, viewer=auth.user)
     task_closure.reopen_task(db, task)
     log_admin_action(
         "task.reopen",

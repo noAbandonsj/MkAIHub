@@ -39,6 +39,9 @@ def test_alembic_upgrade_from_empty_database(tmp_path: Path) -> None:
             "artifact_files",
             "artifacts",
             "comments",
+            "competition_registrations",
+            "competition_results",
+            "competition_reviews",
             "competitions",
             "files",
             "issues",
@@ -50,7 +53,82 @@ def test_alembic_upgrade_from_empty_database(tmp_path: Path) -> None:
         }
         with engine.connect() as connection:
             assert connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == (
-                "20260819_0006"
+                "20260819_0007"
             )
+            assert connection.execute(text("PRAGMA foreign_key_check")).fetchall() == []
+    finally:
+        engine.dispose()
+
+
+def test_alembic_downgrade_and_upgrade_with_data(tmp_path: Path) -> None:
+    database_url = sqlite_url(tmp_path / "migration-data.db")
+    config = Config(str(BACKEND_ROOT / "alembic.ini"))
+    config.set_main_option("sqlalchemy.url", database_url)
+    command.upgrade(config, "head")
+
+    engine = create_engine_from_url(database_url)
+    try:
+        with engine.connect() as connection:
+            connection.execute(
+                text(
+                    "INSERT INTO users (username, display_name, password_hash, role, is_active, created_at, updated_at) "
+                    "VALUES ('u1', 'U1', 'x', 'SYSTEM_ADMIN', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+                )
+            )
+            user_id = connection.execute(text("SELECT id FROM users")).scalar_one()
+            connection.execute(
+                text(
+                    "INSERT INTO competitions (title, summary, rules_markdown, start_at, end_at, created_by, created_at, updated_at) "
+                    "VALUES ('数据赛', 's', 'r', '2020-01-01 00:00:00', '2999-01-01 00:00:00', :uid, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+                ),
+                {"uid": user_id},
+            )
+            competition_id = connection.execute(text("SELECT id FROM competitions")).scalar_one()
+            connection.execute(
+                text(
+                    "INSERT INTO tasks (title, description, creator_id, status, competition_id, competition_required, "
+                    "competition_sort_order, competition_max_score, competition_weight, created_at, updated_at) "
+                    "VALUES ('数据任务', 'd', :uid, 'OPEN', :cid, 1, 1, 30.00, 10.00, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+                ),
+                {"uid": user_id, "cid": competition_id},
+            )
+            task_id = connection.execute(text("SELECT id FROM tasks")).scalar_one()
+            connection.execute(
+                text(
+                    "INSERT INTO task_participants (task_id, user_id, status, joined_at, created_at, updated_at) "
+                    "VALUES (:tid, :uid, 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+                ),
+                {"tid": task_id, "uid": user_id},
+            )
+            connection.commit()
+    finally:
+        engine.dispose()
+
+    command.downgrade(config, "20260819_0006")
+
+    engine = create_engine(database_url)
+    try:
+        with engine.connect() as connection:
+            assert "competition_id" not in [
+                row[1] for row in connection.execute(text("PRAGMA table_info(tasks)")).fetchall()
+            ]
+            assert "status" not in [
+                row[1] for row in connection.execute(text("PRAGMA table_info(competitions)")).fetchall()
+            ]
+            assert connection.execute(text("SELECT title FROM tasks")).scalar_one() == "数据任务"
+            assert connection.execute(text("PRAGMA foreign_key_check")).fetchall() == []
+    finally:
+        engine.dispose()
+
+    command.upgrade(config, "head")
+    engine = create_engine(database_url)
+    try:
+        with engine.connect() as connection:
+            assert connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == (
+                "20260819_0007"
+            )
+            assert connection.execute(text("SELECT title FROM tasks")).scalar_one() == "数据任务"
+            assert connection.execute(text("SELECT status FROM competitions")).scalar_one() == "PUBLISHED"
+            assert connection.execute(text("PRAGMA foreign_key_check")).fetchall() == []
     finally:
         engine.dispose()

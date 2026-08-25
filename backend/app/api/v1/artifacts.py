@@ -148,7 +148,10 @@ def list_artifact_task_sources(
         ).all()
     )
     return ArtifactTaskSourceListResponse(
-        items=[task_closure.submission_read(item, include_task=True) for item in submissions]
+        items=[
+            task_closure.submission_read(db, item, include_task=True, viewer=auth.user)
+            for item in submissions
+        ]
     )
 
 

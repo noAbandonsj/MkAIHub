@@ -3,6 +3,7 @@
 from app.db.base import Base
 from app.models.artifact import Artifact, ArtifactFile, Comment, StoredFile
 from app.models.competition import Competition
+from app.models.competition_closure import CompetitionRegistration, CompetitionResult, CompetitionReview
 from app.models.issue import Issue
 from app.models.task import Task
 from app.models.task_closure import TaskParticipant, TaskSubmission
@@ -13,6 +14,9 @@ __all__ = [
     "ArtifactFile",
     "Base",
     "Competition",
+    "CompetitionRegistration",
+    "CompetitionResult",
+    "CompetitionReview",
     "Comment",
     "Issue",
     "StoredFile",

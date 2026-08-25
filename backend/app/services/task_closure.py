@@ -12,13 +12,24 @@ from sqlalchemy import and_, exists, func, or_, select
 from sqlalchemy.orm import Session
 
 from app.core.errors import AppError
-from app.models import Artifact, Task, TaskParticipant, TaskSubmission, User
+from app.models import (
+    Artifact,
+    Competition,
+    CompetitionRegistration,
+    CompetitionResult,
+    Task,
+    TaskParticipant,
+    TaskSubmission,
+    User,
+)
 from app.schemas.artifact import UserSummary
 from app.schemas.auth import UserRole
 from app.schemas.task import (
     ParticipantStatus,
     SubmissionStatus,
+    SubmissionReviewSummary,
     SubmissionTaskSummary,
+    TaskCompetitionSummary,
     TaskParticipantRead,
     TaskStatus,
     TaskSubmissionRead,
@@ -105,10 +116,27 @@ def _has_pending_submission(db: Session, task_id: int) -> bool:
     )
 
 
+def load_submittable_artifact(db: Session, user: User, artifact_id: int) -> Artifact:
+    """Only the author's own published artifacts can back a submission."""
+
+    artifact = db.get(Artifact, artifact_id)
+    if artifact is None:
+        raise AppError("ARTIFACT_NOT_FOUND", "Artifact not found", status_code=404)
+    if artifact.author_id != user.id or artifact.status != "PUBLISHED":
+        raise AppError(
+            "ARTIFACT_NOT_SUBMITTABLE",
+            "Only your published artifacts can be submitted",
+            status_code=422,
+        )
+    return artifact
+
+
 def _recompute_task_status(db: Session, task: Task) -> None:
     """Derive OPEN/IN_PROGRESS/REVIEWING from participants and pending rounds."""
 
-    if _is_terminal(task):
+    if _is_terminal(task) or task.competition_id is not None:
+        # Competition tasks only ever sit in OPEN/CLOSED; per-participant
+        # progress lives in the submission rows, never in the task status.
         return
     # Sessions run with autoflush=False, so pending participant and submission
     # changes must be flushed before the existence checks below can see them.
@@ -127,6 +155,14 @@ def _recompute_task_status(db: Session, task: Task) -> None:
 def join_task(db: Session, task: Task, user: User) -> TaskParticipant:
     if _is_terminal(task):
         raise _state_conflict("A finished task cannot be joined")
+    if task.competition_id is not None:
+        competition = db.get(Competition, task.competition_id)
+        if competition is None or competition.status != "PUBLISHED":
+            raise AppError(
+                "COMPETITION_STATE_CONFLICT",
+                "The competition does not accept participation",
+                status_code=409,
+            )
     participant = find_participant(db, task.id, user.id)
     now = _utcnow()
     if participant is None:
@@ -181,6 +217,13 @@ def create_submission(
     artifact_id: int,
     note: str | None,
 ) -> TaskSubmission:
+    if task.competition_id is not None:
+        # Competition tasks gate on registration and the deadline instead of
+        # the standalone pending-round rule; imported lazily to keep the
+        # competition service depending on this module in one direction only.
+        from app.services.competition_closure import create_competition_submission
+
+        return create_competition_submission(db, task, user, artifact_id, note)
     if _is_terminal(task):
         raise _state_conflict("A finished task cannot receive submissions")
     participant = _require_active_participant(db, task, user)
@@ -191,15 +234,7 @@ def create_submission(
             "The current submission is still pending or already accepted",
             status_code=409,
         )
-    artifact = db.get(Artifact, artifact_id)
-    if artifact is None:
-        raise AppError("ARTIFACT_NOT_FOUND", "Artifact not found", status_code=404)
-    if artifact.author_id != user.id or artifact.status != "PUBLISHED":
-        raise AppError(
-            "ARTIFACT_NOT_SUBMITTABLE",
-            "Only your published artifacts can be submitted",
-            status_code=422,
-        )
+    artifact = load_submittable_artifact(db, user, artifact_id)
     if current is not None:
         current.is_current = False
     last_round = int(
@@ -237,6 +272,12 @@ def decide_submission(
     task = db.get(Task, submission.task_id)
     if task is None:
         raise AppError("TASK_NOT_FOUND", "Task not found", status_code=404)
+    if task.competition_id is not None:
+        raise AppError(
+            "SUBMISSION_STATE_CONFLICT",
+            "Competition submissions cannot be decided by accept-style actions",
+            status_code=409,
+        )
     if task.creator_id != user.id and not _is_admin(user):
         raise AppError("FORBIDDEN", "Only the task creator or an administrator can decide submissions", status_code=403)
     if not submission.is_current:
@@ -282,6 +323,8 @@ def _state_submission_conflict() -> AppError:
 def complete_task(db: Session, task: Task, user: User) -> Task:
     if task.creator_id != user.id:
         raise AppError("FORBIDDEN", "Only the task creator can complete this task", status_code=403)
+    if task.competition_id is not None:
+        raise _state_conflict("A competition task is completed through result publication, not this action")
     accepted_count = int(
         db.scalar(
             select(func.count())
@@ -322,9 +365,12 @@ def close_task(db: Session, task: Task, user: User) -> Task:
 def reopen_task(db: Session, task: Task) -> Task:
     if task.status != TaskStatus.CLOSED.value:
         raise _state_conflict("Only a closed task can be reopened")
-    task.status = (
-        TaskStatus.IN_PROGRESS.value if _has_active_participant(db, task.id) else TaskStatus.OPEN.value
-    )
+    if task.competition_id is not None:
+        task.status = TaskStatus.OPEN.value
+    else:
+        task.status = (
+            TaskStatus.IN_PROGRESS.value if _has_active_participant(db, task.id) else TaskStatus.OPEN.value
+        )
     task.closed_at = None
     task.updated_at = _utcnow()
     db.commit()
@@ -366,11 +412,57 @@ def participant_read(participant: TaskParticipant) -> TaskParticipantRead:
     )
 
 
-def submission_read(submission: TaskSubmission, include_task: bool = False) -> TaskSubmissionRead:
+def submission_read(
+    db: Session,
+    submission: TaskSubmission,
+    include_task: bool = False,
+    viewer: User | None = None,
+) -> TaskSubmissionRead:
+    task = submission.task
     task_summary: SubmissionTaskSummary | None = None
     if include_task:
-        task = submission.task
-        task_summary = SubmissionTaskSummary(id=task.id, title=task.title, status=task.status)
+        competition = task.competition
+        task_summary = SubmissionTaskSummary(
+            id=task.id,
+            title=task.title,
+            status=task.status,
+            competition=(
+                TaskCompetitionSummary(
+                    id=competition.id,
+                    title=competition.title,
+                    lifecycle_status=competition.status,
+                )
+                if competition is not None
+                else None
+            ),
+        )
+    review_summary: SubmissionReviewSummary | None = None
+    competition_rank: int | None = None
+    competition_award: str | None = None
+    competition = task.competition if task.competition_id is not None else None
+    if competition is not None and viewer is not None:
+        results_public = competition.status in ("RESULT_PUBLISHED", "ARCHIVED")
+        review = submission.competition_review
+        if review is not None and (results_public or _is_admin(viewer)):
+            review_summary = SubmissionReviewSummary(
+                raw_score=review.raw_score,
+                comment=review.comment,
+                reviewed_at=review.reviewed_at,
+                reviewer=UserSummary.model_validate(review.reviewer),
+            )
+        if results_public:
+            participant_user_id = submission.participant.user_id
+            result_row = db.scalar(
+                select(CompetitionResult)
+                .join(CompetitionResult.registration)
+                .where(
+                    CompetitionResult.competition_id == competition.id,
+                    CompetitionRegistration.user_id == participant_user_id,
+                )
+            )
+            if result_row is not None:
+                competition_rank = result_row.rank
+                competition_award = result_row.award
     decider = submission.decider
     return TaskSubmissionRead(
         id=submission.id,
@@ -392,4 +484,7 @@ def submission_read(submission: TaskSubmission, include_task: bool = False) -> T
         decider=UserSummary.model_validate(decider) if decider is not None else None,
         decision_note=submission.decision_note,
         task=task_summary,
+        competition_review=review_summary,
+        competition_rank=competition_rank,
+        competition_award=competition_award,
     )

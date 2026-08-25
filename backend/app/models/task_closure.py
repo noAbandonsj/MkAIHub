@@ -93,3 +93,6 @@ class TaskSubmission(Base):
     participant: Mapped[TaskParticipant] = relationship()
     artifact: Mapped[Artifact] = relationship()
     decider: Mapped[User | None] = relationship()
+    # Quoted annotation: the reverse side lives in competition_closure and is
+    # resolved through the declarative registry to avoid a circular import.
+    competition_review: Mapped["CompetitionReview"] = relationship(uselist=False)
