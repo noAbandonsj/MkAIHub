@@ -11,6 +11,8 @@ export interface TaskListItem {
   title: string
   creator: UserSummary
   status: TaskStatus
+  competition_id?: number | null
+  competition_title?: string | null
   deadline_at?: string | null
   completed_at?: string | null
   closed_at?: string | null
@@ -51,10 +53,24 @@ export interface SubmissionArtifactSummary {
   status: string
 }
 
+export interface TaskCompetitionSummary {
+  id: number
+  title: string
+  lifecycle_status: string
+}
+
 export interface SubmissionTaskSummary {
   id: number
   title: string
   status: TaskStatus
+  competition: TaskCompetitionSummary | null
+}
+
+export interface SubmissionReviewSummary {
+  raw_score: string
+  comment?: string | null
+  reviewed_at: string
+  reviewer: UserSummary
 }
 
 export interface TaskSubmission {
@@ -73,6 +89,9 @@ export interface TaskSubmission {
   decider?: UserSummary | null
   decision_note?: string | null
   task?: SubmissionTaskSummary | null
+  competition_review?: SubmissionReviewSummary | null
+  competition_rank?: number | null
+  competition_award?: string | null
 }
 
 export interface TaskSubmissionListResponse {

@@ -1,4 +1,5 @@
 import { apiClient } from './client'
+import type { CompetitionAwardInput, CompetitionRead, CompetitionTaskInput } from '@/types/competition'
 import type { TaskRead } from '@/types/task'
 import type { UserRead, UserRole } from '@/types/user'
 
@@ -73,6 +74,24 @@ export const adminApi = {
 
   reopenTask(taskId: number) {
     return apiClient.post<TaskRead>(`/admin/tasks/${taskId}/reopen`)
+  },
+
+  createCompetitionTask(competitionId: number, input: CompetitionTaskInput) {
+    return apiClient.post<TaskRead>(`/admin/competitions/${competitionId}/tasks`, input)
+  },
+
+  updateCompetitionTask(competitionId: number, taskId: number, input: Partial<CompetitionTaskInput>) {
+    return apiClient.patch<TaskRead>(`/admin/competitions/${competitionId}/tasks/${taskId}`, input)
+  },
+
+  deleteCompetitionTask(competitionId: number, taskId: number) {
+    return apiClient.delete<void>(`/admin/competitions/${competitionId}/tasks/${taskId}`)
+  },
+
+  publishCompetitionResults(competitionId: number, awards?: CompetitionAwardInput[]) {
+    return apiClient.post<CompetitionRead>(`/admin/competitions/${competitionId}/publish-results`, {
+      awards: awards ?? null,
+    })
   },
 }
 

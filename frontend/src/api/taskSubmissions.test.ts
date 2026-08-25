@@ -51,4 +51,19 @@ describe('task submission API client', () => {
 
     expect(JSON.parse(String(fetchMock.mock.calls[1][1]?.body))).toEqual({ note: null })
   })
+
+  it('submits a competition review with score and comment', async () => {
+    const fetchMock = vi.mocked(fetch)
+    fetchMock.mockResolvedValueOnce(jsonResponse({ csrf_token: 'csrf-review' }))
+    fetchMock.mockResolvedValueOnce(jsonResponse({ id: 9, competition_review: { raw_score: '20.00' } }))
+
+    await taskSubmissionsApi.competitionReview(9, '20.00', ' 结构清晰 ')
+
+    expect(String(fetchMock.mock.calls[1][0])).toContain('/task-submissions/9/competition-review')
+    expect(fetchMock.mock.calls[1][1]?.method).toBe('POST')
+    expect(JSON.parse(String(fetchMock.mock.calls[1][1]?.body))).toEqual({
+      raw_score: '20.00',
+      comment: '结构清晰',
+    })
+  })
 })

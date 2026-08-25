@@ -3,6 +3,11 @@ import type {
   CompetitionInput,
   CompetitionListResponse,
   CompetitionRead,
+  CompetitionRegistrationListResponse,
+  CompetitionRegistrationRead,
+  CompetitionRegistrationSummary,
+  CompetitionResults,
+  CompetitionTaskListResponse,
 } from '@/types/competition'
 
 export interface CompetitionListQuery {
@@ -35,5 +40,26 @@ export const competitionsApi = {
   },
   remove(id: number) {
     return apiClient.delete<void>(`/admin/competitions/${id}`)
+  },
+  register(id: number) {
+    return apiClient.post<CompetitionRegistrationRead>(`/competitions/${id}/registrations`)
+  },
+  cancelRegistration(id: number) {
+    return apiClient.delete<CompetitionRegistrationSummary>(`/competitions/${id}/registrations/me`)
+  },
+  listTasks(id: number) {
+    return apiClient.get<CompetitionTaskListResponse>(`/competitions/${id}/tasks`)
+  },
+  listResults(id: number) {
+    return apiClient.get<CompetitionResults>(`/competitions/${id}/results`)
+  },
+  listRegistrations(id: number) {
+    return apiClient.get<CompetitionRegistrationListResponse>(`/admin/competitions/${id}/registrations`)
+  },
+  publish(id: number) {
+    return apiClient.post<CompetitionRead>(`/admin/competitions/${id}/publish`)
+  },
+  archive(id: number) {
+    return apiClient.post<CompetitionRead>(`/admin/competitions/${id}/archive`)
   },
 }

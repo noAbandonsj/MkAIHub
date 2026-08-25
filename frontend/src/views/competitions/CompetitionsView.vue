@@ -20,9 +20,14 @@ import AppPageHeader from '@/components/common/AppPageHeader.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import { routeNames } from '@/router/route-names'
-import type { CompetitionListItem, CompetitionStatus } from '@/types/competition'
+import type { CompetitionLifecycle, CompetitionListItem, CompetitionStatus } from '@/types/competition'
 import { formatDate } from '@/utils/format'
-import { competitionStatusLabels, competitionStatusTones } from '@/utils/status'
+import {
+  competitionLifecycleLabels,
+  competitionLifecycleTones,
+  competitionStatusLabels,
+  competitionStatusTones,
+} from '@/utils/status'
 
 const items = ref<CompetitionListItem[]>([])
 const query = ref('')
@@ -105,6 +110,14 @@ onMounted(() => void loadCompetitions())
           <StatusBadge
             :label="competitionStatusLabels[row.status as CompetitionStatus]"
             :tone="competitionStatusTones[row.status as CompetitionStatus]"
+          />
+        </template>
+      </ElTableColumn>
+      <ElTableColumn label="运营状态" width="110">
+        <template #default="{ row }">
+          <StatusBadge
+            :label="competitionLifecycleLabels[row.lifecycle_status as CompetitionLifecycle]"
+            :tone="competitionLifecycleTones[row.lifecycle_status as CompetitionLifecycle]"
           />
         </template>
       </ElTableColumn>

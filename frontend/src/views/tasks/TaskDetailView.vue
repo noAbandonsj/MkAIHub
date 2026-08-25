@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import {
   ElAlert,
@@ -55,11 +55,14 @@ const decideLoadingId = ref<number | null>(null)
 const errorMessage = ref('')
 const submitArtifactId = ref<number | null>(null)
 const submitNote = ref('')
+const reviewScores = reactive<Record<number, string>>({})
+const reviewComments = reactive<Record<number, string>>({})
 
 const taskId = computed(() => Number(route.params.id))
 const isCreator = computed(() => task.value?.creator.id === session.currentUser?.id)
 const canDecide = computed(() => isCreator.value || session.isAdmin)
 const canClose = computed(() => isCreator.value || session.isAdmin)
+const isCompetitionTask = computed(() => task.value?.competition_id != null)
 const isTerminal = computed(() => task.value?.status === 'COMPLETED' || task.value?.status === 'CLOSED')
 const myParticipation = computed(() => task.value?.my_participation ?? null)
 const isActiveParticipant = computed(() => myParticipation.value?.status === 'ACTIVE')
@@ -72,9 +75,16 @@ const myCurrentSubmission = computed(() =>
 )
 const canSubmit = computed(() => {
   if (!isActiveParticipant.value || isTerminal.value) return false
+  if (isCompetitionTask.value) {
+    // Competition rounds are unlimited until the deadline; the backend gates.
+    return task.value?.status === 'OPEN'
+  }
   const current = myCurrentSubmission.value
   return !current || current.status === 'REVISION_REQUIRED' || current.status === 'REJECTED'
 })
+const reviewableSubmissions = computed(() =>
+  submissions.value.filter((item) => item.is_current),
+)
 const timelineEvents = computed<TimelineEvent[]>(() => {
   const events: TimelineEvent[] = []
   const current = task.value
@@ -276,6 +286,24 @@ async function decideSubmission(submission: TaskSubmission, action: 'request_rev
   }
 }
 
+async function submitCompetitionReview(submission: TaskSubmission): Promise<void> {
+  const rawScore = (reviewScores[submission.id] ?? '').trim()
+  if (!rawScore) {
+    ElMessage.warning('请填写评审分数')
+    return
+  }
+  decideLoadingId.value = submission.id
+  try {
+    await taskSubmissionsApi.competitionReview(submission.id, rawScore, reviewComments[submission.id] ?? '')
+    ElMessage.success('评审已保存')
+    await loadTask()
+  } catch (error) {
+    ElMessage.error(getApiErrorMessage(error, '评审失败'))
+  } finally {
+    decideLoadingId.value = null
+  }
+}
+
 watch(taskId, () => void loadTask())
 onMounted(() => {
   void loadTask()
@@ -301,6 +329,15 @@ onMounted(() => {
             <h1>{{ task.title }}</h1>
             <div class="artifact-detail-meta">
               <span>创建人：{{ task.creator.display_name }}</span>
+              <span v-if="task.competition_id">
+                所属竞赛：
+                <RouterLink
+                  class="table-title-link"
+                  :to="{ name: routeNames.competitionDetail, params: { id: task.competition_id } }"
+                >
+                  {{ task.competition_title ?? `竞赛 #${task.competition_id}` }}
+                </RouterLink>
+              </span>
               <span>参与：{{ task.participant_count }} 人</span>
               <span>成果：{{ task.submission_count }} 次</span>
               <span>创建：{{ formatDate(task.created_at) }}</span>
@@ -355,8 +392,10 @@ onMounted(() => {
                 还没有可提交的已发布展品，可先在展品模块创建并发布。
               </p>
             </div>
-            <p v-else-if="isActiveParticipant" class="muted-copy">
-              当前轮次正在等待发布人处理，暂不能提交新成果。
+            <p v-else-if="isActiveParticipant">
+              {{ isCompetitionTask
+                ? '截止时间前可继续提交新版本，竞赛计分以最后一次有效提交为准。'
+                : '当前轮次正在等待发布人处理，暂不能提交新成果。' }}
             </p>
 
             <ul v-if="mySubmissions.length" class="task-submission-list">
@@ -380,11 +419,21 @@ onMounted(() => {
                   <template v-if="submission.note">说明：{{ submission.note }}</template>
                 </p>
                 <p v-if="submission.decision_note" class="muted-copy">处理意见：{{ submission.decision_note }}</p>
+                <p v-if="submission.competition_review" class="muted-copy">
+                  评审得分：{{ submission.competition_review.raw_score }}
+                  <template v-if="submission.competition_review.comment">
+                    评语：{{ submission.competition_review.comment }}
+                  </template>
+                </p>
+                <p v-if="submission.competition_rank" class="muted-copy">
+                  竞赛名次：第 {{ submission.competition_rank }} 名
+                  <template v-if="submission.competition_award">（{{ submission.competition_award }}）</template>
+                </p>
               </li>
             </ul>
           </section>
 
-          <section v-if="canDecide" class="artifact-detail-section">
+          <section v-if="canDecide && !isCompetitionTask" class="artifact-detail-section">
             <div class="detail-section-heading">
               <h2>成果验收</h2>
               <span>共 {{ submissions.length }} 次提交</span>
@@ -443,6 +492,60 @@ onMounted(() => {
             </ul>
           </section>
 
+          <section v-if="isCompetitionTask && session.isAdmin" class="artifact-detail-section">
+            <div class="detail-section-heading">
+              <h2>竞赛评审</h2>
+              <span>{{ reviewableSubmissions.length }} 条当前有效提交</span>
+            </div>
+            <p v-if="!reviewableSubmissions.length" class="muted-copy">还没有参赛人提交成果。</p>
+            <ul v-else class="task-submission-list">
+              <li v-for="submission in reviewableSubmissions" :key="submission.id" class="task-submission-item">
+                <div class="task-submission-head">
+                  <span>{{ submission.participant.display_name }}</span>
+                  <span>第 {{ submission.round_no }} 轮</span>
+                  <RouterLink
+                    class="table-title-link"
+                    :to="{ name: routeNames.artifactDetail, params: { id: submission.artifact.id } }"
+                  >
+                    {{ submission.artifact.title }}
+                  </RouterLink>
+                  <template v-if="submission.competition_review">
+                    <StatusBadge label="已评审" tone="done" />
+                    <span class="muted-copy">
+                      {{ submission.competition_review.raw_score }} 分 ·
+                      {{ formatDate(submission.competition_review.reviewed_at) }}
+                    </span>
+                  </template>
+                  <StatusBadge v-else label="待评审" tone="pending" />
+                </div>
+                <p class="muted-copy">
+                  提交：{{ formatDate(submission.submitted_at) }}
+                  <template v-if="submission.note">说明：{{ submission.note }}</template>
+                </p>
+                <div class="task-review-form">
+                  <ElInput
+                    v-model="reviewScores[submission.id]"
+                    class="task-review-score"
+                    placeholder="分数"
+                  />
+                  <ElInput
+                    v-model="reviewComments[submission.id]"
+                    class="task-review-comment"
+                    placeholder="评语（可选）"
+                  />
+                  <ElButton
+                    size="small"
+                    type="primary"
+                    :loading="decideLoadingId === submission.id"
+                    @click="submitCompetitionReview(submission)"
+                  >
+                    {{ submission.competition_review ? '更新评审' : '提交评审' }}
+                  </ElButton>
+                </div>
+              </li>
+            </ul>
+          </section>
+
           <section v-if="timelineEvents.length" class="artifact-detail-section">
             <div class="detail-section-heading"><h2>处理时间线</h2></div>
             <ol class="task-timeline">
@@ -464,7 +567,12 @@ onMounted(() => {
             >
               编辑任务
             </RouterLink>
-            <ElButton v-if="isCreator && !isTerminal" type="primary" :loading="actionLoading" @click="completeTask">
+            <ElButton
+              v-if="isCreator && !isTerminal && !isCompetitionTask"
+              type="primary"
+              :loading="actionLoading"
+              @click="completeTask"
+            >
               标记完成
             </ElButton>
             <ElButton v-if="canClose && !isTerminal" :loading="actionLoading" @click="closeTask">关闭任务</ElButton>

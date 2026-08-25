@@ -1,12 +1,15 @@
 import { describe, expect, it } from 'vitest'
 
-import type { CompetitionStatus } from '@/types/competition'
+import type { CompetitionLifecycle, CompetitionStatus, RegistrationStatus } from '@/types/competition'
 import type { IssueStatus } from '@/types/issue'
 import type { TaskStatus } from '@/types/task'
 
 import {
+  competitionLifecycleLabels,
+  competitionLifecycleTones,
   competitionStatusLabels,
   competitionStatusTones,
+  registrationStatusLabels,
   issueStatusLabels,
   issueStatusTones,
   taskStatusLabels,
@@ -57,5 +60,30 @@ describe('competition status mappings', () => {
       expect(['open', 'done', 'closed']).toContain(competitionStatusTones[status])
     }
     expect(competitionStatusTones.ENDED).toBe('closed')
+  })
+})
+
+describe('competition lifecycle mappings', () => {
+  it('labels every lifecycle status', () => {
+    expect(competitionLifecycleLabels.DRAFT).toBe('草稿')
+    expect(competitionLifecycleLabels.PUBLISHED).toBe('已发布')
+    expect(competitionLifecycleLabels.RESULT_PUBLISHED).toBe('结果已发布')
+    expect(competitionLifecycleLabels.ARCHIVED).toBe('已归档')
+  })
+
+  it('maps every lifecycle status to a badge tone', () => {
+    const statuses: CompetitionLifecycle[] = ['DRAFT', 'PUBLISHED', 'RESULT_PUBLISHED', 'ARCHIVED']
+    for (const status of statuses) {
+      expect(['open', 'pending', 'done', 'closed']).toContain(competitionLifecycleTones[status])
+    }
+    expect(competitionLifecycleTones.RESULT_PUBLISHED).toBe('done')
+  })
+})
+
+describe('registration status mappings', () => {
+  it('labels every registration status', () => {
+    const statuses: RegistrationStatus[] = ['REGISTERED', 'CANCELLED']
+    expect(registrationStatusLabels.REGISTERED).toBe('已报名')
+    expect(registrationStatusLabels.CANCELLED).toBe('已取消')
   })
 })

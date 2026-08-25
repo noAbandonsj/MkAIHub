@@ -1231,3 +1231,24 @@ a {
   gap: 2px;
   padding: 4px 0;
 }
+
+/* Competition closure blocks (batch 9) */
+
+.task-review-form {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.task-review-score {
+  width: 110px;
+}
+
+.task-review-comment {
+  flex: 1;
+}
+
+.admin-dialog-hint {
+  margin: 0 0 10px;
+}

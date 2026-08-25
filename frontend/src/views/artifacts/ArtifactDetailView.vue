@@ -170,11 +170,27 @@ onMounted(() => void loadArtifact())
                   >
                     {{ source.task?.title ?? `任务 #${source.task_id}` }}
                   </RouterLink>
-                  <span v-if="source.task">（{{ source.task.status === 'COMPLETED' ? '已完成' : '进行中' }}）</span>
+                  <RouterLink
+                    v-if="source.task?.competition"
+                    class="table-title-link"
+                    :to="{ name: routeNames.competitionDetail, params: { id: source.task.competition.id } }"
+                  >
+                    {{ source.task.competition.title }}
+                  </RouterLink>
                 </div>
                 <p class="muted-copy">
                   {{ source.participant.display_name }} 第 {{ source.round_no }} 轮提交 ·
                   {{ formatDate(source.submitted_at) }}
+                </p>
+                <p v-if="source.competition_review" class="muted-copy">
+                  任务得分：{{ source.competition_review.raw_score }}
+                  <template v-if="source.competition_review.comment">
+                    评语：{{ source.competition_review.comment }}
+                  </template>
+                </p>
+                <p v-if="source.competition_rank" class="muted-copy">
+                  竞赛名次：第 {{ source.competition_rank }} 名
+                  <template v-if="source.competition_award">（{{ source.competition_award }}）</template>
                 </p>
               </li>
             </ul>

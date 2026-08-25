@@ -52,6 +52,34 @@ describe('competition API client', () => {
     expect(fetchMock.mock.calls[1][1]?.method).toBe('POST')
   })
 
+  it('registers and cancels through the registration endpoints', async () => {
+    const fetchMock = vi.mocked(fetch)
+    // Only the first write prefetches the CSRF token; later writes reuse it.
+    fetchMock.mockResolvedValueOnce(jsonResponse({ csrf_token: 'csrf-reg' }))
+    fetchMock.mockResolvedValueOnce(jsonResponse({ id: 3, status: 'REGISTERED' }, 201))
+    fetchMock.mockResolvedValueOnce(jsonResponse({ id: 3, status: 'CANCELLED' }))
+
+    await competitionsApi.register(7)
+    await competitionsApi.cancelRegistration(7)
+
+    expect(String(fetchMock.mock.calls[1][0])).toContain('/competitions/7/registrations')
+    expect(fetchMock.mock.calls[1][1]?.method).toBe('POST')
+    expect(String(fetchMock.mock.calls[2][0])).toContain('/competitions/7/registrations/me')
+    expect(fetchMock.mock.calls[2][1]?.method).toBe('DELETE')
+  })
+
+  it('loads competition tasks and published results', async () => {
+    const fetchMock = vi.mocked(fetch)
+    fetchMock.mockResolvedValueOnce(jsonResponse({ items: [] }))
+    fetchMock.mockResolvedValueOnce(jsonResponse({ competition_id: 7, items: [] }))
+
+    await competitionsApi.listTasks(7)
+    await competitionsApi.listResults(7)
+
+    expect(String(fetchMock.mock.calls[0][0])).toContain('/competitions/7/tasks')
+    expect(String(fetchMock.mock.calls[1][0])).toContain('/competitions/7/results')
+  })
+
   it('targets the admin update and delete endpoints', async () => {
     const fetchMock = vi.mocked(fetch)
     fetchMock.mockResolvedValue(jsonResponse({ csrf_token: 'csrf-comp' }))

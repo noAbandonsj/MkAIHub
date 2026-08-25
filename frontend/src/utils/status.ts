@@ -1,4 +1,4 @@
-import type { CompetitionStatus } from '@/types/competition'
+import type { CompetitionLifecycle, CompetitionStatus, RegistrationStatus } from '@/types/competition'
 import type { IssueStatus } from '@/types/issue'
 import type { ParticipantStatus, SubmissionStatus, TaskStatus } from '@/types/task'
 
@@ -59,4 +59,23 @@ export const competitionStatusTones: Record<CompetitionStatus, StatusTone> = {
   UPCOMING: 'open',
   ONGOING: 'done',
   ENDED: 'closed',
+}
+
+export const competitionLifecycleLabels: Record<CompetitionLifecycle, string> = {
+  DRAFT: '草稿',
+  PUBLISHED: '已发布',
+  RESULT_PUBLISHED: '结果已发布',
+  ARCHIVED: '已归档',
+}
+
+export const competitionLifecycleTones: Record<CompetitionLifecycle, StatusTone> = {
+  DRAFT: 'pending',
+  PUBLISHED: 'open',
+  RESULT_PUBLISHED: 'done',
+  ARCHIVED: 'closed',
+}
+
+export const registrationStatusLabels: Record<RegistrationStatus, string> = {
+  REGISTERED: '已报名',
+  CANCELLED: '已取消',
 }

@@ -138,6 +138,18 @@ onMounted(() => void loadTasks())
           />
         </template>
       </ElTableColumn>
+      <ElTableColumn label="所属竞赛" min-width="140">
+        <template #default="{ row }">
+          <RouterLink
+            v-if="row.competition_id"
+            class="table-title-link"
+            :to="{ name: routeNames.competitionDetail, params: { id: row.competition_id } }"
+          >
+            {{ row.competition_title ?? `竞赛 #${row.competition_id}` }}
+          </RouterLink>
+          <span v-else class="muted-copy">独立任务</span>
+        </template>
+      </ElTableColumn>
       <ElTableColumn prop="creator.display_name" label="创建人" width="130" />
       <ElTableColumn label="截止时间" width="180">
         <template #default="{ row }">{{ formatDate(row.deadline_at) }}</template>
