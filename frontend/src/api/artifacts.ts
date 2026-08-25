@@ -4,6 +4,7 @@ import type {
   ArtifactListResponse,
   ArtifactRead,
   ArtifactStatus,
+  ArtifactSource,
   CommentListResponse,
   CommentRead,
   StoredFileRead,
@@ -16,6 +17,7 @@ export interface ArtifactListQuery {
   q?: string
   mine?: boolean
   status?: ArtifactStatus | ''
+  source?: ArtifactSource | ''
 }
 
 function queryString(query: ArtifactListQuery): string {
@@ -25,6 +27,7 @@ function queryString(query: ArtifactListQuery): string {
   if (query.q?.trim()) params.set('q', query.q.trim())
   if (query.mine) params.set('mine', 'true')
   if (query.status) params.set('status', query.status)
+  if (query.source) params.set('source', query.source)
   const value = params.toString()
   return value ? `?${value}` : ''
 }

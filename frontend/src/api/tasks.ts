@@ -18,6 +18,8 @@ export interface TaskListQuery {
   mine?: boolean
   participated?: boolean
   pendingReview?: boolean
+  competitionOnly?: boolean
+  pendingCompetitionReview?: boolean
   status?: TaskStatus | ''
 }
 
@@ -29,6 +31,8 @@ function queryString(query: TaskListQuery): string {
   if (query.mine) params.set('mine', 'true')
   if (query.participated) params.set('participated', 'true')
   if (query.pendingReview) params.set('pending_review', 'true')
+  if (query.competitionOnly) params.set('competition_only', 'true')
+  if (query.pendingCompetitionReview) params.set('pending_competition_review', 'true')
   if (query.status) params.set('status', query.status)
   const value = params.toString()
   return value ? `?${value}` : ''

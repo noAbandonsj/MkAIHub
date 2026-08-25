@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import {
   ElAlert,
   ElButton,
@@ -22,12 +23,17 @@ import ArtifactCard from '@/components/artifact/ArtifactCard.vue'
 import AppPageHeader from '@/components/common/AppPageHeader.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import { routeNames } from '@/router/route-names'
-import type { ArtifactListItem, ArtifactStatus } from '@/types/artifact'
+import type { ArtifactListItem, ArtifactSource, ArtifactStatus } from '@/types/artifact'
 
 const items = ref<ArtifactListItem[]>([])
+const route = useRoute()
 const query = ref('')
 const mine = ref(false)
 const statusFilter = ref<ArtifactStatus | ''>('')
+const initialSource = route.query.source
+const sourceFilter = ref<ArtifactSource | ''>(
+  initialSource === 'TASK_RESULT' || initialSource === 'COMPETITION_ENTRY' ? initialSource : '',
+)
 const page = ref(1)
 const pageSize = ref(12)
 const total = ref(0)
@@ -44,6 +50,7 @@ async function loadArtifacts(): Promise<void> {
       q: query.value,
       mine: mine.value,
       status: mine.value ? statusFilter.value : '',
+      source: sourceFilter.value,
     })
     items.value = response.items
     total.value = response.total
@@ -62,6 +69,7 @@ function search(): void {
 function reset(): void {
   query.value = ''
   statusFilter.value = ''
+  sourceFilter.value = ''
   page.value = 1
   void loadArtifacts()
 }
@@ -73,6 +81,11 @@ function changeMine(): void {
 }
 
 function changeStatus(): void {
+  page.value = 1
+  void loadArtifacts()
+}
+
+function changeSource(): void {
   page.value = 1
   void loadArtifacts()
 }
@@ -115,6 +128,16 @@ onMounted(() => void loadArtifacts())
         <ElOption label="草稿" value="DRAFT" />
         <ElOption label="已发布" value="PUBLISHED" />
         <ElOption label="已归档" value="ARCHIVED" />
+      </ElSelect>
+      <ElSelect
+        v-model="sourceFilter"
+        class="artifact-status-filter"
+        placeholder="全部来源"
+        @change="changeSource"
+      >
+        <ElOption label="全部来源" value="" />
+        <ElOption label="任务成果" value="TASK_RESULT" />
+        <ElOption label="竞赛作品" value="COMPETITION_ENTRY" />
       </ElSelect>
       <ElButton type="primary" @click="search">搜索</ElButton>
       <ElButton @click="reset">重置</ElButton>

@@ -24,6 +24,12 @@ defineProps<{
           {{ artifact.attachment_count }} 个附件
         </span>
       </div>
+      <div v-if="artifact.source_types.length" class="artifact-card__sources">
+        <span v-if="artifact.source_types.includes('TASK_RESULT')" class="source-badge">任务成果</span>
+        <span v-if="artifact.source_types.includes('COMPETITION_ENTRY')" class="source-badge is-competition">
+          竞赛作品
+        </span>
+      </div>
       <h3>{{ artifact.title }}</h3>
       <p>{{ artifact.summary }}</p>
       <div class="artifact-card__meta">

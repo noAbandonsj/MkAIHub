@@ -31,6 +31,8 @@ describe('task API client', () => {
       mine: true,
       participated: true,
       pendingReview: true,
+      competitionOnly: true,
+      pendingCompetitionReview: true,
       status: 'OPEN',
     })
 
@@ -42,6 +44,8 @@ describe('task API client', () => {
     expect(url).toContain('mine=true')
     expect(url).toContain('participated=true')
     expect(url).toContain('pending_review=true')
+    expect(url).toContain('competition_only=true')
+    expect(url).toContain('pending_competition_review=true')
     expect(url).toContain('status=OPEN')
   })
 

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import {
   ElAlert,
   ElButton,
@@ -25,15 +26,20 @@ import AppPageHeader from '@/components/common/AppPageHeader.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import { routeNames } from '@/router/route-names'
+import { useSessionStore } from '@/stores/session'
 import type { TaskListItem, TaskStatus } from '@/types/task'
 import { formatDate } from '@/utils/format'
 import { taskStatusLabels, taskStatusTones } from '@/utils/status'
 
 const items = ref<TaskListItem[]>([])
+const route = useRoute()
+const session = useSessionStore()
 const query = ref('')
 const mine = ref(false)
-const participated = ref(false)
-const pendingReview = ref(false)
+const participated = ref(route.query.participated === 'true')
+const pendingReview = ref(route.query.pending_review === 'true')
+const competitionOnly = ref(route.query.competition_only === 'true')
+const pendingCompetitionReview = ref(route.query.pending_competition_review === 'true')
 const statusFilter = ref<TaskStatus | ''>('')
 const page = ref(1)
 const pageSize = ref(12)
@@ -52,6 +58,8 @@ async function loadTasks(): Promise<void> {
       mine: mine.value,
       participated: participated.value,
       pendingReview: pendingReview.value,
+      competitionOnly: competitionOnly.value,
+      pendingCompetitionReview: pendingCompetitionReview.value,
       status: statusFilter.value,
     })
     items.value = response.items
@@ -74,6 +82,8 @@ function reset(): void {
   mine.value = false
   participated.value = false
   pendingReview.value = false
+  competitionOnly.value = false
+  pendingCompetitionReview.value = false
   page.value = 1
   void loadTasks()
 }
@@ -112,6 +122,10 @@ onMounted(() => void loadTasks())
       <ElCheckbox v-model="mine" @change="changeFilter">只看我的</ElCheckbox>
       <ElCheckbox v-model="participated" @change="changeFilter">我参与的</ElCheckbox>
       <ElCheckbox v-model="pendingReview" @change="changeFilter">待我验收</ElCheckbox>
+      <ElCheckbox v-model="competitionOnly" @change="changeFilter">竞赛任务</ElCheckbox>
+      <ElCheckbox v-if="session.isAdmin" v-model="pendingCompetitionReview" @change="changeFilter">
+        待我评审
+      </ElCheckbox>
       <ElSelect v-model="statusFilter" class="list-status-filter" placeholder="全部状态" @change="changeFilter">
         <ElOption label="全部状态" value="" />
         <ElOption v-for="(label, value) in taskStatusLabels" :key="value" :label="label" :value="value" />

@@ -1,5 +1,6 @@
 export type ArtifactStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED'
 export type CommentStatus = 'VISIBLE' | 'HIDDEN'
+export type ArtifactSource = 'TASK_RESULT' | 'COMPETITION_ENTRY'
 
 export interface UserSummary {
   id: number
@@ -24,6 +25,7 @@ export interface ArtifactListItem {
   author: UserSummary
   status: ArtifactStatus
   attachment_count: number
+  source_types: ArtifactSource[]
   published_at?: string | null
   created_at: string
   updated_at: string

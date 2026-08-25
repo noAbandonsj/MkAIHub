@@ -346,6 +346,72 @@ a {
   font-size: 20px;
 }
 
+.workbench-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.workbench-card {
+  display: flex;
+  min-height: 132px;
+  flex-direction: column;
+  gap: 7px;
+  padding: 20px;
+  transition: border-color var(--mk-transition), box-shadow var(--mk-transition), transform var(--mk-transition);
+}
+
+.workbench-card:hover {
+  border-color: var(--mk-primary);
+  box-shadow: var(--mk-shadow-md);
+  transform: translateY(-2px);
+}
+
+.workbench-card__count {
+  color: var(--mk-primary);
+  font-family: var(--mk-font-display);
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.workbench-card > strong {
+  color: var(--mk-text-primary);
+  font-size: 16px;
+}
+
+.workbench-card > span:last-child,
+.statistics-item > span {
+  color: var(--mk-text-muted);
+  font-size: 13px;
+}
+
+.statistics-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  padding: 6px 0;
+}
+
+.statistics-item {
+  display: flex;
+  min-height: 92px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-right: 1px solid var(--mk-border);
+}
+
+.statistics-item:last-child {
+  border-right: 0;
+}
+
+.statistics-item > strong {
+  color: var(--mk-text-primary);
+  font-family: var(--mk-font-display);
+  font-size: 28px;
+}
+
 .panel-card {
   border: 1px solid var(--mk-border);
   border-radius: var(--mk-radius-lg);
@@ -577,6 +643,28 @@ a {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+.artifact-card__sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.source-badge {
+  display: inline-flex;
+  padding: 3px 8px;
+  border-radius: var(--mk-radius-pill);
+  color: #1d5f8a;
+  background: rgba(47, 121, 168, 0.12);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.source-badge.is-competition {
+  color: #805d38;
+  background: rgba(179, 154, 134, 0.18);
 }
 
 .artifact-card__topline,
@@ -1056,6 +1144,10 @@ a {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .workbench-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .artifact-grid,
   .explore-artifact-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1098,6 +1190,20 @@ a {
 
   .module-grid {
     grid-template-columns: 1fr;
+  }
+
+  .workbench-grid,
+  .statistics-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .statistics-item {
+    border-right: 0;
+    border-bottom: 1px solid var(--mk-border);
+  }
+
+  .statistics-item:last-child {
+    border-bottom: 0;
   }
 
   .artifact-grid,

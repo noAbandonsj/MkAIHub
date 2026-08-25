@@ -30,6 +30,7 @@ describe('artifact API client', () => {
       q: ' 提示词 ',
       mine: true,
       status: 'DRAFT',
+      source: 'TASK_RESULT',
     })
 
     const url = String(fetchMock.mock.calls[0][0])
@@ -39,6 +40,7 @@ describe('artifact API client', () => {
     expect(url).toContain('q=%E6%8F%90%E7%A4%BA%E8%AF%8D')
     expect(url).toContain('mine=true')
     expect(url).toContain('status=DRAFT')
+    expect(url).toContain('source=TASK_RESULT')
   })
 
   it('uploads multipart data without forcing a JSON content type', async () => {
