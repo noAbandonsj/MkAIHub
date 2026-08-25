@@ -11,6 +11,7 @@ from app.api.v1.files import router as files_router
 from app.api.v1.issues import router as issues_router
 from app.api.v1.task_submissions import router as task_submissions_router
 from app.api.v1.tasks import router as tasks_router
+from app.api.v1.workbench import router as workbench_router
 
 
 router = APIRouter(prefix="/v1")
@@ -25,5 +26,6 @@ router.include_router(tasks_router)
 router.include_router(task_submissions_router)
 router.include_router(issues_router)
 router.include_router(competitions_router)
+router.include_router(workbench_router)
 
 __all__ = ["router"]

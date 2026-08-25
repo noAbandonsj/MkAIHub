@@ -24,6 +24,7 @@ from app.models.user import User
 
 if TYPE_CHECKING:
     from app.models.issue import Issue
+    from app.models.task_closure import TaskSubmission
 
 
 def utcnow() -> datetime:
@@ -97,6 +98,7 @@ class Artifact(Base):
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
+    task_submissions: Mapped[list[TaskSubmission]] = relationship(back_populates="artifact")
 
 
 class ArtifactFile(Base):

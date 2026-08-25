@@ -6,8 +6,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.core.errors import AppError
-from app.models import Artifact, ArtifactFile, StoredFile, User
-from app.schemas.artifact import ArtifactListItem, ArtifactRead, FileRead, UserSummary
+from app.models import Artifact, ArtifactFile, StoredFile, TaskSubmission, User
+from app.schemas.artifact import ArtifactListItem, ArtifactRead, ArtifactSource, FileRead, UserSummary
 from app.schemas.auth import UserRole
 
 
@@ -15,6 +15,7 @@ def artifact_load_options():
     return (
         joinedload(Artifact.author),
         selectinload(Artifact.file_links).joinedload(ArtifactFile.file),
+        selectinload(Artifact.task_submissions).joinedload(TaskSubmission.task),
     )
 
 
@@ -73,6 +74,11 @@ def replace_artifact_files(
 
 
 def artifact_list_item(artifact: Artifact) -> ArtifactListItem:
+    source_types: list[ArtifactSource] = []
+    if any(item.task.competition_id is None for item in artifact.task_submissions):
+        source_types.append(ArtifactSource.TASK_RESULT)
+    if any(item.task.competition_id is not None for item in artifact.task_submissions):
+        source_types.append(ArtifactSource.COMPETITION_ENTRY)
     return ArtifactListItem(
         id=artifact.id,
         title=artifact.title,
@@ -80,6 +86,7 @@ def artifact_list_item(artifact: Artifact) -> ArtifactListItem:
         author=UserSummary.model_validate(artifact.author),
         status=artifact.status,
         attachment_count=len(artifact.file_links),
+        source_types=source_types,
         published_at=artifact.published_at,
         created_at=artifact.created_at,
         updated_at=artifact.updated_at,

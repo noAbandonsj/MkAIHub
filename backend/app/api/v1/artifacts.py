@@ -11,12 +11,13 @@ from sqlalchemy.orm import Session, joinedload
 from app.api.v1.deps import AuthContext, get_current_auth, require_csrf
 from app.core.errors import AppError
 from app.db.session import get_db
-from app.models import Artifact, Comment, TaskParticipant, TaskSubmission
+from app.models import Artifact, Comment, Task, TaskParticipant, TaskSubmission
 from app.schemas.artifact import (
     ArtifactCreate,
     ArtifactListResponse,
     ArtifactRead,
     ArtifactStatus,
+    ArtifactSource,
     ArtifactUpdate,
     CommentCreate,
     CommentListResponse,
@@ -53,6 +54,7 @@ def list_artifacts(
     q: str | None = Query(None, max_length=100),
     mine: bool = False,
     status_filter: ArtifactStatus | None = Query(None, alias="status"),
+    source_filter: ArtifactSource | None = Query(None, alias="source"),
     auth: AuthContext = Depends(get_current_auth),
     db: Session = Depends(get_db),
 ) -> ArtifactListResponse:
@@ -71,6 +73,15 @@ def list_artifacts(
     if search:
         pattern = f"%{search}%"
         conditions.append(or_(Artifact.title.ilike(pattern), Artifact.summary.ilike(pattern)))
+    if source_filter is not None:
+        source_artifact_ids = select(TaskSubmission.artifact_id).join(
+            Task, Task.id == TaskSubmission.task_id
+        )
+        if source_filter == ArtifactSource.TASK_RESULT:
+            source_artifact_ids = source_artifact_ids.where(Task.competition_id.is_(None))
+        else:
+            source_artifact_ids = source_artifact_ids.where(Task.competition_id.is_not(None))
+        conditions.append(Artifact.id.in_(source_artifact_ids))
 
     count_statement = select(func.count()).select_from(Artifact).where(*conditions)
     ordering = (

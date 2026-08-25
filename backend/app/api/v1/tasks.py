@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session, joinedload
 from app.api.v1.deps import AuthContext, get_current_auth, require_csrf
 from app.core.errors import AppError
 from app.db.session import get_db
-from app.models import Competition, Task, TaskParticipant, TaskSubmission
+from app.models import Competition, CompetitionReview, Task, TaskParticipant, TaskSubmission
 from app.schemas.auth import UserRole
 from app.schemas.task import (
     TaskCreate,
@@ -47,6 +47,8 @@ def list_tasks(
     mine: bool = False,
     participated: bool = False,
     pending_review: bool = False,
+    competition_only: bool = False,
+    pending_competition_review: bool = False,
     status_filter: TaskStatus | None = Query(None, alias="status"),
     auth: AuthContext = Depends(get_current_auth),
     db: Session = Depends(get_db),
@@ -67,6 +69,29 @@ def list_tasks(
                 TaskSubmission.task_id == Task.id,
                 TaskSubmission.is_current.is_(True),
                 TaskSubmission.status.in_(PENDING_SUBMISSION_STATUSES),
+            )
+        )
+    if competition_only:
+        conditions.append(Task.competition_id.is_not(None))
+    if pending_competition_review:
+        if auth.user.role != UserRole.SYSTEM_ADMIN.value:
+            raise AppError("FORBIDDEN", "Only administrators can review competition submissions", status_code=403)
+        unreviewed_task_ids = (
+            select(TaskSubmission.task_id)
+            .outerjoin(
+                CompetitionReview,
+                CompetitionReview.task_submission_id == TaskSubmission.id,
+            )
+            .where(
+                TaskSubmission.is_current.is_(True),
+                CompetitionReview.id.is_(None),
+            )
+        )
+        published_competition_ids = select(Competition.id).where(Competition.status == "PUBLISHED")
+        conditions.extend(
+            (
+                Task.id.in_(unreviewed_task_ids),
+                Task.competition_id.in_(published_competition_ids),
             )
         )
     if status_filter is not None:

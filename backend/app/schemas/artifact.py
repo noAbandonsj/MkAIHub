@@ -21,6 +21,11 @@ class CommentStatus(StrEnum):
     HIDDEN = "HIDDEN"
 
 
+class ArtifactSource(StrEnum):
+    TASK_RESULT = "TASK_RESULT"
+    COMPETITION_ENTRY = "COMPETITION_ENTRY"
+
+
 class UserSummary(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -104,6 +109,7 @@ class ArtifactListItem(UtcJsonModel):
     author: UserSummary
     status: ArtifactStatus
     attachment_count: int
+    source_types: list[ArtifactSource] = Field(default_factory=list)
     published_at: datetime | None
     created_at: datetime
     updated_at: datetime
