@@ -1,8 +1,8 @@
 # MkAIHub 第二阶段批次7数据契约
 
 > 文档状态：批次7实施基线（批次8/9的编码依据）
-> 版本：v1.0
-> 更新日期：2026-08-24
+> 版本：v1.2
+> 更新日期：2026-08-25
 > 前置文档：[MkAIHub 第二阶段闭环实施方案](./MkAIHub第二阶段闭环实施方案.md)
 
 ## 1. 文档目的
@@ -467,3 +467,16 @@ POST   /api/v1/admin/competitions/{competition_id}/archive           归档 → 
 | 后端 | 领取/退出/提交/退回/验收/拒绝/完成/关闭/重开；`participated`、`pending_review` 筛选；提交表结构预留竞赛多轮语义 | 报名/取消；竞赛任务配置；竞赛提交与评审；计分与结果发布；归档；排行榜 |
 | 前端 | 任务详情参与区/提交区/验收区/时间线；展品来源展示；筛选入口 | 竞赛详情任务清单与排行榜；管理页任务配置、评审、结果发布、归档；展品竞赛来源 |
 | 不做 | 竞赛评分、报名、结果（提交表仅预留） | — |
+
+## 11. 批次9实施修订（2026-08-25 登记）
+
+以下修订在批次 9 编码时确定，与正文冲突时以本节为准：
+
+1. **运营状态字段名**：竞赛列表/详情的时间状态字段 `status`（`UPCOMING/ONGOING/ENDED`）自首版已存在，运营状态改用新字段 `lifecycle_status`（`DRAFT/PUBLISHED/RESULT_PUBLISHED/ARCHIVED`），两者并存输出。7.2 节"列表项新增 `status`"按此理解执行。
+2. **DRAFT 竞赛的任务可见性**：`competition_id` 指向 `DRAFT` 竞赛的任务对非管理员在任务列表不返回、详情返回 404（`TASK_NOT_FOUND`），避免绕过竞赛可见性规则。
+3. **领取竞赛任务的前置**：竞赛任务仅在父竞赛 `PUBLISHED` 时允许领取，否则 `COMPETITION_STATE_CONFLICT`；提交仍另行要求有效报名。
+4. **归档后的结果可见性**：`ARCHIVED` 竞赛若已发布过结果，排行榜与评审信息保持可读（归档不撤回已发布结果）；`GET /competitions/{id}/results` 在 `RESULT_PUBLISHED` 与 `ARCHIVED` 状态下开放，其余状态 404。
+5. **发布结果的校验顺序**：先校验竞赛已结束（`COMPETITION_NOT_ENDED`），再校验评审齐全（`COMPETITION_REVIEWS_INCOMPLETE`）。
+6. **新增错误码**：`REGISTRATION_NOT_FOUND`（404，取消不存在的报名）、`COMPETITION_FIELD_LOCKED`（422，`PUBLISHED` 竞赛修改 `start_at`）、`COMPETITION_AWARD_INVALID`（422，奖项指向未排名或重复的报名）。
+7. **新增管理端点**：`GET /api/v1/admin/competitions/{id}/registrations`，供管理页展示完整报名名单并选择奖项归属。
+8. **评审动作日志**：评审落库动作名为 `competition_review.create` / `competition_review.update`（对 7.4 节的命名细化），创建与改分分别记录。
