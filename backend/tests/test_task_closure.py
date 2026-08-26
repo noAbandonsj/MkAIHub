@@ -485,5 +485,12 @@ def test_closure_unique_and_foreign_key_constraints(test_settings) -> None:
             with pytest.raises(IntegrityError):
                 db.flush()
             db.rollback()
+
+            # RESTRICT keeps submitted artifacts from being physically deleted.
+            referenced_artifact = db.scalar(select(Artifact).where(Artifact.id == artifact_id))
+            db.delete(referenced_artifact)
+            with pytest.raises(IntegrityError):
+                db.flush()
+            db.rollback()
     finally:
         engine.dispose()

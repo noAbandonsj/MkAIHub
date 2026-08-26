@@ -610,6 +610,13 @@ def test_competition_constraints(test_settings) -> None:
                 db.flush()
             db.rollback()
 
+            # RESTRICT keeps reviewed submissions intact.
+            referenced_submission = db.scalar(select(TaskSubmission).where(TaskSubmission.id == submission.id))
+            db.delete(referenced_submission)
+            with pytest.raises(IntegrityError):
+                db.flush()
+            db.rollback()
+
             db.add(
                 CompetitionResult(
                     competition_id=competition.id,
@@ -620,6 +627,22 @@ def test_competition_constraints(test_settings) -> None:
                 )
             )
             db.commit()
+            # RESTRICT keeps published results' registrations intact.
+            referenced_registration = db.scalar(
+                select(CompetitionRegistration).where(CompetitionRegistration.id == registration.id)
+            )
+            db.delete(referenced_registration)
+            with pytest.raises(IntegrityError):
+                db.flush()
+            db.rollback()
+
+            # RESTRICT keeps registered users from being deleted.
+            registered_user = db.scalar(select(User).where(User.id == user.id))
+            db.delete(registered_user)
+            with pytest.raises(IntegrityError):
+                db.flush()
+            db.rollback()
+
             referenced_competition = db.scalar(select(Competition).where(Competition.id == competition.id))
             db.delete(referenced_competition)
             with pytest.raises(IntegrityError):
