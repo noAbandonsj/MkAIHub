@@ -176,7 +176,7 @@ onMounted(() => {
     <div class="admin-section">
       <div class="admin-toolbar">
         <h3>展品</h3>
-        <ElSelect v-model="artifactStatus" class="list-status-filter" @change="artifactPage = 1; loadArtifacts()">
+        <ElSelect v-model="artifactStatus" class="filter-select" @change="artifactPage = 1; loadArtifacts()">
           <ElOption label="已发布" value="PUBLISHED" />
           <ElOption label="已归档" value="ARCHIVED" />
         </ElSelect>

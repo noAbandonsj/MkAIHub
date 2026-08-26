@@ -93,17 +93,17 @@ onMounted(() => void loadIssues())
       :action-to="{ name: routeNames.issueNew }"
     />
 
-    <section class="list-toolbar panel-card" aria-label="Issue 筛选">
+    <section class="filter-toolbar panel-card" aria-label="Issue 筛选">
       <ElInput
         v-model="query"
-        class="list-search"
+        class="filter-search"
         clearable
         placeholder="搜索标题或正文"
         @keyup.enter="search"
         @clear="search"
       />
       <ElCheckbox v-model="mine" @change="changeFilter">只看我的</ElCheckbox>
-      <ElSelect v-model="statusFilter" class="list-status-filter" placeholder="全部状态" @change="changeFilter">
+      <ElSelect v-model="statusFilter" class="filter-select" placeholder="全部状态" @change="changeFilter">
         <ElOption label="全部状态" value="" />
         <ElOption v-for="(label, value) in issueStatusLabels" :key="value" :label="label" :value="value" />
       </ElSelect>

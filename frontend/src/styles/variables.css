@@ -18,6 +18,21 @@
   --mk-radius-pill: 999px;
   --mk-shadow-sm: 0 2px 8px rgba(43, 26, 18, 0.06);
   --mk-shadow-md: 0 8px 24px rgba(255, 107, 53, 0.12);
+  --mk-space-xs: 6px;
+  --mk-space-sm: 10px;
+  --mk-space-md: 16px;
+  --mk-space-lg: 24px;
+  --mk-space-xl: 32px;
+  --mk-status-info-text: #1d5f8a;
+  --mk-status-info-bg: rgba(47, 121, 168, 0.14);
+  --mk-status-warning-text: #8a5a12;
+  --mk-status-warning-bg: rgba(199, 141, 33, 0.16);
+  --mk-status-success-text: #16794b;
+  --mk-status-success-bg: rgba(37, 166, 100, 0.12);
+  --mk-status-neutral-text: #6f5a78;
+  --mk-status-neutral-bg: rgba(121, 89, 137, 0.12);
+  --mk-status-danger-text: #b42318;
+  --mk-status-danger-bg: rgba(210, 63, 63, 0.08);
   --mk-font-body: 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI',
     'PingFang SC', 'Microsoft YaHei', sans-serif;
   --mk-font-display: 'DM Serif Display', 'Noto Serif SC', 'PingFang SC', serif;

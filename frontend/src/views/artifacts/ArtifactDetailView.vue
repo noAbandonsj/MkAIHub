@@ -116,7 +116,7 @@ onMounted(() => void loadArtifact())
 </script>
 
 <template>
-  <div class="page-container module-page artifact-detail-page">
+  <div class="page-container module-page detail-page">
     <ElAlert v-if="errorMessage" class="page-alert" :title="errorMessage" type="error" :closable="false" />
     <p v-if="loading" class="muted-copy page-loading">正在加载展品…</p>
     <template v-else-if="artifact">
@@ -126,25 +126,25 @@ onMounted(() => void loadArtifact())
         <span>{{ artifact.title }}</span>
       </nav>
 
-      <article class="artifact-detail-layout">
-        <main class="panel-card artifact-detail-main">
-          <div class="artifact-detail-heading">
+      <article class="detail-layout">
+        <main class="panel-card detail-main">
+          <div class="detail-heading">
             <ArtifactStatusBadge :status="artifact.status" />
             <h1>{{ artifact.title }}</h1>
-            <p class="artifact-detail-summary">{{ artifact.summary }}</p>
-            <div class="artifact-detail-meta">
+            <p class="detail-summary">{{ artifact.summary }}</p>
+            <div class="detail-meta">
               <span>作者：{{ artifact.author.display_name }}</span>
               <span>更新：{{ formatDate(artifact.updated_at) }}</span>
               <span v-if="artifact.published_at">发布：{{ formatDate(artifact.published_at) }}</span>
             </div>
           </div>
 
-          <section class="artifact-detail-section">
+          <section class="detail-section">
             <div class="detail-section-heading"><h2>正文</h2></div>
             <MarkdownViewer :content="artifact.content_markdown" />
           </section>
 
-          <section class="artifact-detail-section">
+          <section class="detail-section">
             <div class="detail-section-heading">
               <h2>附件</h2>
               <span>{{ artifact.files.length }} 个</span>
@@ -152,7 +152,7 @@ onMounted(() => void loadArtifact())
             <AttachmentList :files="artifact.files" />
           </section>
 
-          <section v-if="taskSources.length" class="artifact-detail-section">
+          <section v-if="taskSources.length" class="detail-section">
             <div class="detail-section-heading">
               <h2>任务来源</h2>
               <span>{{ taskSources.length }} 条</span>
@@ -203,8 +203,8 @@ onMounted(() => void loadArtifact())
           />
         </main>
 
-        <aside class="artifact-detail-side">
-          <section class="panel-card artifact-action-card">
+        <aside class="detail-side">
+          <section class="panel-card detail-action-card">
             <h2>展品操作</h2>
             <RouterLink
               v-if="isAuthor && artifact.status !== 'ARCHIVED'"

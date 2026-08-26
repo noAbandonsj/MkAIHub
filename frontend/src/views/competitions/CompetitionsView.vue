@@ -81,10 +81,10 @@ onMounted(() => void loadCompetitions())
       description="查看内部竞赛的时间安排和规则。竞赛由系统管理员维护，状态随时间自动计算。"
     />
 
-    <section class="list-toolbar panel-card" aria-label="竞赛筛选">
+    <section class="filter-toolbar panel-card" aria-label="竞赛筛选">
       <ElInput
         v-model="query"
-        class="list-search"
+        class="filter-search"
         clearable
         placeholder="搜索标题或简介"
         @keyup.enter="search"

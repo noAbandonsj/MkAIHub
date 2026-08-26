@@ -524,32 +524,35 @@ onMounted(() => void loadCompetitions())
 
     <ElDialog
       v-model="dialogVisible"
+      class="admin-competition-dialog"
       :title="editingId === null ? '创建竞赛' : '编辑竞赛'"
       width="min(640px, calc(100vw - 32px))"
     >
-      <ElForm ref="formRef" :model="form" :rules="formRules" label-position="top">
+      <ElForm ref="formRef" class="admin-dialog-form" :model="form" :rules="formRules" label-position="top">
         <ElFormItem label="标题" prop="title">
           <ElInput v-model="form.title" maxlength="200" show-word-limit />
         </ElFormItem>
         <ElFormItem label="简介" prop="summary">
           <ElInput v-model="form.summary" maxlength="500" show-word-limit />
         </ElFormItem>
-        <ElFormItem label="开始时间" prop="start_at">
-          <ElDatePicker
-            v-model="form.start_at"
-            class="task-deadline-picker"
-            type="datetime"
-            placeholder="选择开始时间"
-          />
-        </ElFormItem>
-        <ElFormItem label="结束时间" prop="end_at">
-          <ElDatePicker
-            v-model="form.end_at"
-            class="task-deadline-picker"
-            type="datetime"
-            placeholder="选择结束时间"
-          />
-        </ElFormItem>
+        <div class="admin-form-grid">
+          <ElFormItem label="开始时间" prop="start_at">
+            <ElDatePicker
+              v-model="form.start_at"
+              class="task-deadline-picker"
+              type="datetime"
+              placeholder="选择开始时间"
+            />
+          </ElFormItem>
+          <ElFormItem label="结束时间" prop="end_at">
+            <ElDatePicker
+              v-model="form.end_at"
+              class="task-deadline-picker"
+              type="datetime"
+              placeholder="选择结束时间"
+            />
+          </ElFormItem>
+        </div>
         <ElFormItem label="Markdown 规则" prop="rules_markdown">
           <ElInput
             v-model="form.rules_markdown"
@@ -568,13 +571,14 @@ onMounted(() => void loadCompetitions())
 
     <ElDialog
       v-model="taskDialogVisible"
+      class="admin-competition-dialog admin-competition-dialog--wide"
       :title="`竞赛任务配置${activeCompetition ? `：${activeCompetition.title}` : ''}`"
       width="min(880px, calc(100vw - 32px))"
     >
       <p class="muted-copy admin-dialog-hint">
         草稿竞赛可自由配置；发布后一旦产生报名或提交，仅排序可调整，删除仅限草稿。评审在任务详情页进行，此处显示评审进度。
       </p>
-      <ElTable :data="competitionTasks" row-key="id" class="user-table">
+      <ElTable :data="competitionTasks" row-key="id" class="user-table admin-dialog-table">
         <ElTableColumn prop="sort_order" label="顺序" width="70" />
         <ElTableColumn label="任务" min-width="180">
           <template #default="{ row }">
@@ -615,10 +619,11 @@ onMounted(() => void loadCompetitions())
 
     <ElDialog
       v-model="taskFormVisible"
+      class="admin-competition-dialog"
       :title="taskEditingId === null ? '添加竞赛任务' : '编辑竞赛任务'"
       width="min(560px, calc(100vw - 32px))"
     >
-      <ElForm ref="taskFormRef" :model="taskForm" :rules="taskFormRules" label-position="top">
+      <ElForm ref="taskFormRef" class="admin-dialog-form" :model="taskForm" :rules="taskFormRules" label-position="top">
         <ElFormItem label="任务标题" prop="title">
           <ElInput v-model="taskForm.title" maxlength="200" show-word-limit />
         </ElFormItem>
@@ -632,15 +637,17 @@ onMounted(() => void loadCompetitions())
             inactive-text="选做"
           />
         </ElFormItem>
-        <ElFormItem label="显示顺序">
-          <ElInputNumber v-model="taskForm.sort_order" :min="0" :max="9999" />
-        </ElFormItem>
-        <ElFormItem label="最高分（原始评分上限）">
-          <ElInputNumber v-model="taskForm.max_score" :min="0.01" :max="9999.99" :precision="2" />
-        </ElFormItem>
-        <ElFormItem label="权重（计入竞赛总分）">
-          <ElInputNumber v-model="taskForm.weight" :min="0.01" :max="999.99" :precision="2" />
-        </ElFormItem>
+        <div class="admin-form-grid admin-form-grid--three">
+          <ElFormItem label="显示顺序">
+            <ElInputNumber v-model="taskForm.sort_order" :min="0" :max="9999" />
+          </ElFormItem>
+          <ElFormItem label="最高分（原始评分上限）">
+            <ElInputNumber v-model="taskForm.max_score" :min="0.01" :max="9999.99" :precision="2" />
+          </ElFormItem>
+          <ElFormItem label="权重（计入竞赛总分）">
+            <ElInputNumber v-model="taskForm.weight" :min="0.01" :max="999.99" :precision="2" />
+          </ElFormItem>
+        </div>
         <ElFormItem label="提交截止时间（可选，不晚于竞赛结束）">
           <ElDatePicker
             v-model="taskForm.deadline_at"
@@ -658,13 +665,14 @@ onMounted(() => void loadCompetitions())
 
     <ElDialog
       v-model="resultsDialogVisible"
+      class="admin-competition-dialog admin-competition-dialog--wide"
       :title="`竞赛结果${activeCompetition ? `：${activeCompetition.title}` : ''}`"
       width="min(720px, calc(100vw - 32px))"
     >
       <p class="muted-copy admin-dialog-hint">
         排名在发布时冻结；修改奖项或评分后需重新发布（整体重算并替换快照）。
       </p>
-      <ElTable :data="resultRows" row-key="registration_id" class="user-table">
+      <ElTable :data="resultRows" row-key="registration_id" class="user-table admin-dialog-table">
         <ElTableColumn label="名次" width="70">
           <template #default="{ row }">第 {{ row.rank }} 名</template>
         </ElTableColumn>

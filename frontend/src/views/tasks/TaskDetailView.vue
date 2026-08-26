@@ -312,7 +312,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="page-container module-page artifact-detail-page">
+  <div class="page-container module-page detail-page">
     <ElAlert v-if="errorMessage" class="page-alert" :title="errorMessage" type="error" :closable="false" />
     <p v-if="loading" class="muted-copy page-loading">正在加载任务…</p>
     <template v-else-if="task">
@@ -322,12 +322,12 @@ onMounted(() => {
         <span>{{ task.title }}</span>
       </nav>
 
-      <article class="artifact-detail-layout">
-        <main class="panel-card artifact-detail-main">
-          <div class="artifact-detail-heading">
+      <article class="detail-layout">
+        <main class="panel-card detail-main">
+          <div class="detail-heading">
             <StatusBadge :label="taskStatusLabels[task.status]" :tone="taskStatusTones[task.status]" />
             <h1>{{ task.title }}</h1>
-            <div class="artifact-detail-meta">
+            <div class="detail-meta">
               <span>创建人：{{ task.creator.display_name }}</span>
               <span v-if="task.competition_id">
                 所属竞赛：
@@ -347,12 +347,12 @@ onMounted(() => {
             </div>
           </div>
 
-          <section class="artifact-detail-section">
+          <section class="detail-section">
             <div class="detail-section-heading"><h2>任务描述</h2></div>
             <MarkdownViewer :content="task.description" />
           </section>
 
-          <section v-if="isActiveParticipant || mySubmissions.length" class="artifact-detail-section">
+          <section v-if="isActiveParticipant || mySubmissions.length" class="detail-section">
             <div class="detail-section-heading">
               <h2>成果提交</h2>
               <span v-if="myCurrentSubmission">当前轮次：第 {{ myCurrentSubmission.round_no }} 轮</span>
@@ -399,7 +399,12 @@ onMounted(() => {
             </p>
 
             <ul v-if="mySubmissions.length" class="task-submission-list">
-              <li v-for="submission in mySubmissions" :key="submission.id" class="task-submission-item">
+              <li
+                v-for="submission in mySubmissions"
+                :key="submission.id"
+                class="task-submission-item"
+                :class="{ 'is-current': submission.is_current }"
+              >
                 <div class="task-submission-head">
                   <StatusBadge
                     :label="submissionStatusLabels[submission.status]"
@@ -433,14 +438,19 @@ onMounted(() => {
             </ul>
           </section>
 
-          <section v-if="canDecide && !isCompetitionTask" class="artifact-detail-section">
+          <section v-if="canDecide && !isCompetitionTask" class="detail-section">
             <div class="detail-section-heading">
               <h2>成果验收</h2>
               <span>共 {{ submissions.length }} 次提交</span>
             </div>
             <p v-if="!submissions.length" class="muted-copy">还没有参与人提交成果。</p>
             <ul v-else class="task-submission-list">
-              <li v-for="submission in submissions" :key="submission.id" class="task-submission-item">
+              <li
+                v-for="submission in submissions"
+                :key="submission.id"
+                class="task-submission-item"
+                :class="{ 'is-current': submission.is_current }"
+              >
                 <div class="task-submission-head">
                   <StatusBadge
                     :label="submissionStatusLabels[submission.status]"
@@ -492,14 +502,18 @@ onMounted(() => {
             </ul>
           </section>
 
-          <section v-if="isCompetitionTask && session.isAdmin" class="artifact-detail-section">
+          <section v-if="isCompetitionTask && session.isAdmin" class="detail-section">
             <div class="detail-section-heading">
               <h2>竞赛评审</h2>
               <span>{{ reviewableSubmissions.length }} 条当前有效提交</span>
             </div>
             <p v-if="!reviewableSubmissions.length" class="muted-copy">还没有参赛人提交成果。</p>
             <ul v-else class="task-submission-list">
-              <li v-for="submission in reviewableSubmissions" :key="submission.id" class="task-submission-item">
+              <li
+                v-for="submission in reviewableSubmissions"
+                :key="submission.id"
+                class="task-submission-item is-current"
+              >
                 <div class="task-submission-head">
                   <span>{{ submission.participant.display_name }}</span>
                   <span>第 {{ submission.round_no }} 轮</span>
@@ -546,19 +560,19 @@ onMounted(() => {
             </ul>
           </section>
 
-          <section v-if="timelineEvents.length" class="artifact-detail-section">
+          <section v-if="timelineEvents.length" class="detail-section">
             <div class="detail-section-heading"><h2>处理时间线</h2></div>
             <ol class="task-timeline">
               <li v-for="(event, index) in timelineEvents" :key="index" class="task-timeline-item">
-                <span class="muted-copy">{{ formatDate(event.at) }}</span>
-                <span>{{ event.text }}</span>
+                <span class="task-timeline-time">{{ formatDate(event.at) }}</span>
+                <span class="task-timeline-content">{{ event.text }}</span>
               </li>
             </ol>
           </section>
         </main>
 
-        <aside class="artifact-detail-side">
-          <section class="panel-card artifact-action-card">
+        <aside class="detail-side">
+          <section class="panel-card detail-action-card">
             <h2>任务操作</h2>
             <RouterLink
               v-if="isCreator && !isTerminal"
@@ -585,7 +599,7 @@ onMounted(() => {
             <p v-else-if="!canDecide" class="muted-copy">只有任务创建者可以编辑或完成任务。</p>
           </section>
 
-          <section class="panel-card artifact-action-card">
+          <section class="panel-card detail-action-card">
             <h2>参与任务</h2>
             <template v-if="!isTerminal">
               <ElButton v-if="!myParticipation || myParticipation.status === 'LEFT'" type="primary" :loading="actionLoading" @click="joinTask">

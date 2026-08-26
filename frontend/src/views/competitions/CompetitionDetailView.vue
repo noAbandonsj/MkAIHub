@@ -113,7 +113,7 @@ onMounted(() => void loadCompetition())
 </script>
 
 <template>
-  <div class="page-container module-page artifact-detail-page">
+  <div class="page-container module-page detail-page">
     <ElAlert v-if="errorMessage" class="page-alert" :title="errorMessage" type="error" :closable="false" />
     <p v-if="loading" class="muted-copy page-loading">正在加载竞赛…</p>
     <template v-else-if="competition">
@@ -123,9 +123,9 @@ onMounted(() => void loadCompetition())
         <span>{{ competition.title }}</span>
       </nav>
 
-      <article class="artifact-detail-layout">
-        <main class="panel-card artifact-detail-main competition-detail-card">
-          <div class="artifact-detail-heading">
+      <article class="detail-layout">
+        <main class="panel-card detail-main competition-detail-card">
+          <div class="detail-heading">
             <StatusBadge
               :label="competitionStatusLabels[competition.status]"
               :tone="competitionStatusTones[competition.status]"
@@ -135,7 +135,7 @@ onMounted(() => void loadCompetition())
               :tone="competitionLifecycleTones[competition.lifecycle_status]"
             />
             <h1>{{ competition.title }}</h1>
-            <div class="artifact-detail-meta">
+            <div class="detail-meta">
               <span>创建人：{{ competition.creator.display_name }}</span>
               <span>开始：{{ formatDate(competition.start_at) }}</span>
               <span>结束：{{ formatDate(competition.end_at) }}</span>
@@ -144,19 +144,19 @@ onMounted(() => void loadCompetition())
             </div>
           </div>
 
-          <section class="artifact-detail-section">
+          <section class="detail-section">
             <div class="detail-section-heading"><h2>简介</h2></div>
             <p>{{ competition.summary }}</p>
           </section>
 
-          <section class="artifact-detail-section">
+          <section class="detail-section">
             <div class="detail-section-heading">
               <h2>竞赛任务</h2>
               <span>{{ tasks.length }} 项</span>
             </div>
             <p v-if="!tasks.length" class="muted-copy">管理员尚未配置竞赛任务。</p>
             <ul v-else class="task-submission-list">
-              <li v-for="task in tasks" :key="task.id" class="task-submission-item">
+              <li v-for="task in tasks" :key="task.id" class="task-submission-item competition-task-item">
                 <div class="task-submission-head">
                   <StatusBadge
                     :label="task.required ? '必做' : '选做'"
@@ -198,12 +198,12 @@ onMounted(() => void loadCompetition())
             </ul>
           </section>
 
-          <section class="artifact-detail-section">
+          <section class="detail-section">
             <div class="detail-section-heading"><h2>规则</h2></div>
             <MarkdownViewer :content="competition.rules_markdown" />
           </section>
 
-          <section v-if="results" class="artifact-detail-section">
+          <section v-if="results" class="detail-section">
             <div class="detail-section-heading">
               <h2>排行榜</h2>
               <span v-if="results.published_at">
@@ -225,8 +225,8 @@ onMounted(() => void loadCompetition())
           </section>
         </main>
 
-        <aside class="artifact-detail-side">
-          <section class="panel-card artifact-action-card">
+        <aside class="detail-side">
+          <section class="panel-card detail-action-card">
             <h2>竞赛报名</h2>
             <template v-if="canRegister">
               <ElButton v-if="!isRegistered" type="primary" :loading="actionLoading" @click="registerCompetition">
@@ -248,7 +248,7 @@ onMounted(() => void loadCompetition())
             </p>
           </section>
 
-          <section v-if="session.isAdmin" class="panel-card artifact-action-card">
+          <section v-if="session.isAdmin" class="panel-card detail-action-card">
             <h2>管理入口</h2>
             <RouterLink class="secondary-action full-width-action" :to="{ name: routeNames.admin }">
               前往管理页配置任务、评审与发布结果

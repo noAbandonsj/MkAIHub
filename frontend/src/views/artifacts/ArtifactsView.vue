@@ -107,10 +107,10 @@ onMounted(() => void loadArtifacts())
       :action-to="{ name: routeNames.artifactNew }"
     />
 
-    <section class="artifact-toolbar panel-card" aria-label="展品筛选">
+    <section class="filter-toolbar panel-card" aria-label="展品筛选">
       <ElInput
         v-model="query"
-        class="artifact-search"
+        class="filter-search"
         clearable
         placeholder="搜索标题或摘要"
         @keyup.enter="search"
@@ -120,7 +120,7 @@ onMounted(() => void loadArtifacts())
       <ElSelect
         v-if="mine"
         v-model="statusFilter"
-        class="artifact-status-filter"
+        class="filter-select"
         placeholder="全部状态"
         @change="changeStatus"
       >
@@ -131,7 +131,7 @@ onMounted(() => void loadArtifacts())
       </ElSelect>
       <ElSelect
         v-model="sourceFilter"
-        class="artifact-status-filter"
+        class="filter-select"
         placeholder="全部来源"
         @change="changeSource"
       >

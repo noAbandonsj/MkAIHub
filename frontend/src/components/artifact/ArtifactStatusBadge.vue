@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import StatusBadge from '@/components/common/StatusBadge.vue'
 import type { ArtifactStatus } from '@/types/artifact'
+import type { StatusTone } from '@/utils/status'
 
 defineProps<{ status: ArtifactStatus }>()
 
@@ -8,8 +10,14 @@ const labels: Record<ArtifactStatus, string> = {
   PUBLISHED: '已发布',
   ARCHIVED: '已归档',
 }
+
+const tones: Record<ArtifactStatus, StatusTone> = {
+  DRAFT: 'pending',
+  PUBLISHED: 'done',
+  ARCHIVED: 'closed',
+}
 </script>
 
 <template>
-  <span class="artifact-status" :class="`is-${status.toLowerCase()}`">{{ labels[status] }}</span>
+  <StatusBadge :label="labels[status]" :tone="tones[status]" />
 </template>

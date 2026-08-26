@@ -110,10 +110,10 @@ onMounted(() => void loadTasks())
       :action-to="{ name: routeNames.taskNew }"
     />
 
-    <section class="list-toolbar panel-card" aria-label="任务筛选">
+    <section class="filter-toolbar panel-card" aria-label="任务筛选">
       <ElInput
         v-model="query"
-        class="list-search"
+        class="filter-search"
         clearable
         placeholder="搜索标题或描述"
         @keyup.enter="search"
@@ -126,7 +126,7 @@ onMounted(() => void loadTasks())
       <ElCheckbox v-if="session.isAdmin" v-model="pendingCompetitionReview" @change="changeFilter">
         待我评审
       </ElCheckbox>
-      <ElSelect v-model="statusFilter" class="list-status-filter" placeholder="全部状态" @change="changeFilter">
+      <ElSelect v-model="statusFilter" class="filter-select" placeholder="全部状态" @change="changeFilter">
         <ElOption label="全部状态" value="" />
         <ElOption v-for="(label, value) in taskStatusLabels" :key="value" :label="label" :value="value" />
       </ElSelect>

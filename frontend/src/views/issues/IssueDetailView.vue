@@ -139,7 +139,7 @@ onMounted(() => void loadIssue())
 </script>
 
 <template>
-  <div class="page-container module-page artifact-detail-page">
+  <div class="page-container module-page detail-page">
     <ElAlert v-if="errorMessage" class="page-alert" :title="errorMessage" type="error" :closable="false" />
     <p v-if="loading" class="muted-copy page-loading">正在加载 Issue…</p>
     <template v-else-if="issue">
@@ -149,12 +149,12 @@ onMounted(() => void loadIssue())
         <span>{{ issue.title }}</span>
       </nav>
 
-      <article class="artifact-detail-layout">
-        <main class="panel-card artifact-detail-main">
-          <div class="artifact-detail-heading">
+      <article class="detail-layout">
+        <main class="panel-card detail-main">
+          <div class="detail-heading">
             <StatusBadge :label="issueStatusLabels[issue.status]" :tone="issueStatusTones[issue.status]" />
             <h1>{{ issue.title }}</h1>
-            <div class="artifact-detail-meta">
+            <div class="detail-meta">
               <span>发起人：{{ issue.author.display_name }}</span>
               <span>创建：{{ formatDate(issue.created_at) }}</span>
               <span>更新：{{ formatDate(issue.updated_at) }}</span>
@@ -162,7 +162,7 @@ onMounted(() => void loadIssue())
             </div>
           </div>
 
-          <section class="artifact-detail-section">
+          <section class="detail-section">
             <div class="detail-section-heading"><h2>正文</h2></div>
             <MarkdownViewer :content="issue.description" />
           </section>
@@ -174,8 +174,8 @@ onMounted(() => void loadIssue())
           />
         </main>
 
-        <aside class="artifact-detail-side">
-          <section class="panel-card artifact-action-card">
+        <aside class="detail-side">
+          <section class="panel-card detail-action-card">
             <h2>Issue 操作</h2>
             <ElButton v-if="isAuthor && isOpen" @click="openEditDialog">编辑内容</ElButton>
             <ElButton v-if="canManageState && isOpen" type="warning" plain :loading="actionLoading" @click="closeIssue">
