@@ -191,3 +191,37 @@ def test_competition_time_validation(client: TestClient, test_settings) -> None:
 
     assert client.delete(f"/api/v1/admin/competitions/{competition_id}", headers=admin_headers).status_code == 204
     assert client.get(f"/api/v1/competitions/{competition_id}", headers=admin_headers).status_code == 404
+
+
+def test_published_competition_start_at_lock(client: TestClient, test_settings) -> None:
+    seed_user(test_settings, username="boss", role="SYSTEM_ADMIN")
+    admin_headers = login(client, "boss")
+
+    competition = create_competition(client, admin_headers)
+    add_competition_task(client, admin_headers, competition["id"])
+    published = client.post(f"/api/v1/admin/competitions/{competition['id']}/publish", headers=admin_headers)
+    assert published.status_code == 200
+
+    # 原样重提 start_at（编辑表单的常态）不算修改，其余字段可更新。
+    resubmitted = client.patch(
+        f"/api/v1/admin/competitions/{competition['id']}",
+        headers=admin_headers,
+        json={
+            "title": competition["title"],
+            "summary": "更新后的简介",
+            "rules_markdown": "# 新规则",
+            "start_at": competition["start_at"],
+            "end_at": "2999-06-01T00:00:00Z",
+        },
+    )
+    assert resubmitted.status_code == 200, resubmitted.text
+    assert resubmitted.json()["summary"] == "更新后的简介"
+    assert resubmitted.json()["end_at"] == "2999-06-01T00:00:00Z"
+
+    changed = client.patch(
+        f"/api/v1/admin/competitions/{competition['id']}",
+        headers=admin_headers,
+        json={"start_at": "2997-01-01T00:00:00Z"},
+    )
+    assert changed.status_code == 422
+    assert changed.json()["code"] == "COMPETITION_FIELD_LOCKED"

@@ -197,11 +197,20 @@ def update_competition(
     if any(value is None for value in changes.values()):
         raise AppError("COMPETITION_FIELD_REQUIRED", "Competition fields cannot be null", status_code=422)
     if competition.status == "PUBLISHED" and "start_at" in changes:
-        raise AppError(
-            "COMPETITION_FIELD_LOCKED",
-            "start_at cannot be changed after the competition is published",
-            status_code=422,
-        )
+        # 编辑表单会原样重提 start_at；SQLite 读回的是 naive UTC，先归一再比较。
+        payload_start = changes["start_at"]
+        stored_start = competition.start_at
+        if payload_start.tzinfo is not None:
+            payload_start = payload_start.astimezone(UTC).replace(tzinfo=None)
+        if stored_start.tzinfo is not None:
+            stored_start = stored_start.astimezone(UTC).replace(tzinfo=None)
+        if payload_start != stored_start:
+            raise AppError(
+                "COMPETITION_FIELD_LOCKED",
+                "start_at cannot be changed after the competition is published",
+                status_code=422,
+            )
+        changes.pop("start_at")
     for field in ("title", "summary", "rules_markdown", "start_at", "end_at"):
         if field in changes:
             setattr(competition, field, changes[field])
