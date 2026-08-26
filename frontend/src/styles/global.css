@@ -192,6 +192,16 @@ a {
   padding-top: 48px;
 }
 
+.module-page {
+  --el-color-primary: var(--mk-primary);
+  --el-color-primary-dark-2: var(--mk-primary-hover);
+  --el-color-primary-light-3: #ff8f66;
+  --el-color-primary-light-5: #ffad91;
+  --el-color-primary-light-7: #ffd1c1;
+  --el-color-primary-light-8: #ffe1d6;
+  --el-color-primary-light-9: #fff0eb;
+}
+
 .explore-hero {
   position: relative;
   overflow: hidden;
@@ -581,24 +591,93 @@ a {
 }
 
 .filter-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 14px 20px;
+  margin-bottom: 22px;
+  padding: 18px 20px;
+  background:
+    linear-gradient(120deg, rgba(255, 107, 53, 0.035), transparent 42%),
+    var(--mk-bg-card);
+}
+
+.filter-fields {
   display: flex;
+  min-width: 0;
   flex-wrap: wrap;
   align-items: center;
   gap: 12px;
-  margin-bottom: 22px;
-  padding: var(--mk-space-md) 20px;
-}
-
-.filter-toolbar .el-button {
-  margin-left: 0;
 }
 
 .filter-search {
-  width: min(360px, 100%);
+  min-width: 260px;
+  flex: 1 1 320px;
+  width: auto;
 }
 
 .filter-select {
-  width: 148px;
+  width: 160px;
+}
+
+.filter-toolbar .el-input__wrapper,
+.filter-toolbar .el-select__wrapper {
+  min-height: 42px;
+  border-radius: var(--mk-radius-md);
+  background: rgba(255, 255, 255, 0.62);
+  box-shadow: 0 0 0 1px var(--mk-border) inset;
+  transition: background var(--mk-transition), box-shadow var(--mk-transition);
+}
+
+.filter-toolbar .el-input__wrapper:hover,
+.filter-toolbar .el-select__wrapper:hover {
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 0 0 1px rgba(255, 107, 53, 0.48) inset;
+}
+
+.filter-toolbar .el-input__wrapper.is-focus,
+.filter-toolbar .el-select__wrapper.is-focused {
+  background: var(--mk-white);
+  box-shadow: 0 0 0 1px var(--mk-primary) inset, 0 0 0 3px var(--mk-primary-soft);
+}
+
+.filter-options {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 22px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(234, 212, 188, 0.72);
+}
+
+.filter-options .el-checkbox {
+  margin-right: 0;
+}
+
+.filter-actions {
+  display: flex;
+  grid-column: 2;
+  grid-row: 1;
+  align-items: center;
+  gap: 10px;
+}
+
+.filter-actions .el-button {
+  min-width: 76px;
+  min-height: 42px;
+  margin-left: 0;
+  border-radius: var(--mk-radius-md);
+  font-weight: 600;
+}
+
+.filter-actions .el-button:not(.el-button--primary) {
+  --el-button-text-color: var(--mk-text-secondary);
+  --el-button-border-color: var(--mk-border);
+  --el-button-bg-color: rgba(255, 255, 255, 0.58);
+  --el-button-hover-text-color: var(--mk-primary);
+  --el-button-hover-border-color: var(--mk-primary);
+  --el-button-hover-bg-color: var(--mk-primary-soft);
 }
 
 .artifact-grid {
@@ -991,14 +1070,40 @@ a {
 
 .detail-action-card .el-button {
   width: 100%;
+  min-height: 42px;
   margin-left: 0;
+  border-radius: var(--mk-radius-md);
+  font-weight: 600;
 }
 
 .full-width-action {
   display: inline-flex;
+  min-height: 42px;
   align-items: center;
   justify-content: center;
   width: 100%;
+}
+
+.detail-action-card .secondary-action {
+  border-color: var(--mk-border);
+  color: var(--mk-text-secondary);
+  background: rgba(255, 255, 255, 0.58);
+  font-weight: 600;
+}
+
+.detail-action-card .secondary-action:hover {
+  border-color: var(--mk-primary);
+  color: var(--mk-primary);
+  background: var(--mk-primary-soft);
+}
+
+.detail-action-card .el-button:not(.el-button--primary):not(.el-button--danger):not(.el-button--warning):not(.el-button--success) {
+  --el-button-text-color: var(--mk-text-secondary);
+  --el-button-border-color: var(--mk-border);
+  --el-button-bg-color: rgba(255, 255, 255, 0.58);
+  --el-button-hover-text-color: var(--mk-primary);
+  --el-button-hover-border-color: var(--mk-primary);
+  --el-button-hover-bg-color: var(--mk-primary-soft);
 }
 
 .attachment-list {
@@ -1454,8 +1559,37 @@ a {
 
 @media (max-width: 640px) {
   .filter-toolbar {
+    grid-template-columns: 1fr;
     align-items: stretch;
+    gap: 12px;
     padding: 14px;
+  }
+
+  .filter-fields,
+  .filter-options,
+  .filter-actions {
+    grid-column: 1;
+    grid-row: auto;
+    width: 100%;
+  }
+
+  .filter-fields > *,
+  .filter-search,
+  .filter-select {
+    width: 100%;
+  }
+
+  .filter-search {
+    min-width: 0;
+  }
+
+  .filter-options {
+    gap: 6px 18px;
+    padding-top: 10px;
+  }
+
+  .filter-actions .el-button {
+    flex: 1;
   }
 
   .detail-heading h1 {

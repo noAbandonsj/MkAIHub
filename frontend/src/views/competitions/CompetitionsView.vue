@@ -82,16 +82,20 @@ onMounted(() => void loadCompetitions())
     />
 
     <section class="filter-toolbar panel-card" aria-label="竞赛筛选">
-      <ElInput
-        v-model="query"
-        class="filter-search"
-        clearable
-        placeholder="搜索标题或简介"
-        @keyup.enter="search"
-        @clear="search"
-      />
-      <ElButton type="primary" @click="search">搜索</ElButton>
-      <ElButton @click="reset">重置</ElButton>
+      <div class="filter-fields">
+        <ElInput
+          v-model="query"
+          class="filter-search"
+          clearable
+          placeholder="搜索标题或简介"
+          @keyup.enter="search"
+          @clear="search"
+        />
+      </div>
+      <div class="filter-actions">
+        <ElButton type="primary" @click="search">搜索</ElButton>
+        <ElButton @click="reset">重置</ElButton>
+      </div>
     </section>
 
     <ElAlert v-if="errorMessage" class="page-alert" :title="errorMessage" type="error" :closable="false" />

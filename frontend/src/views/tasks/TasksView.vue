@@ -111,27 +111,33 @@ onMounted(() => void loadTasks())
     />
 
     <section class="filter-toolbar panel-card" aria-label="任务筛选">
-      <ElInput
-        v-model="query"
-        class="filter-search"
-        clearable
-        placeholder="搜索标题或描述"
-        @keyup.enter="search"
-        @clear="search"
-      />
-      <ElCheckbox v-model="mine" @change="changeFilter">只看我的</ElCheckbox>
-      <ElCheckbox v-model="participated" @change="changeFilter">我参与的</ElCheckbox>
-      <ElCheckbox v-model="pendingReview" @change="changeFilter">待我验收</ElCheckbox>
-      <ElCheckbox v-model="competitionOnly" @change="changeFilter">竞赛任务</ElCheckbox>
-      <ElCheckbox v-if="session.isAdmin" v-model="pendingCompetitionReview" @change="changeFilter">
-        待我评审
-      </ElCheckbox>
-      <ElSelect v-model="statusFilter" class="filter-select" placeholder="全部状态" @change="changeFilter">
-        <ElOption label="全部状态" value="" />
-        <ElOption v-for="(label, value) in taskStatusLabels" :key="value" :label="label" :value="value" />
-      </ElSelect>
-      <ElButton type="primary" @click="search">搜索</ElButton>
-      <ElButton @click="reset">重置</ElButton>
+      <div class="filter-fields">
+        <ElInput
+          v-model="query"
+          class="filter-search"
+          clearable
+          placeholder="搜索标题或描述"
+          @keyup.enter="search"
+          @clear="search"
+        />
+        <ElSelect v-model="statusFilter" class="filter-select" placeholder="全部状态" @change="changeFilter">
+          <ElOption label="全部状态" value="" />
+          <ElOption v-for="(label, value) in taskStatusLabels" :key="value" :label="label" :value="value" />
+        </ElSelect>
+      </div>
+      <div class="filter-options">
+        <ElCheckbox v-model="mine" @change="changeFilter">只看我的</ElCheckbox>
+        <ElCheckbox v-model="participated" @change="changeFilter">我参与的</ElCheckbox>
+        <ElCheckbox v-model="pendingReview" @change="changeFilter">待我验收</ElCheckbox>
+        <ElCheckbox v-model="competitionOnly" @change="changeFilter">竞赛任务</ElCheckbox>
+        <ElCheckbox v-if="session.isAdmin" v-model="pendingCompetitionReview" @change="changeFilter">
+          待我评审
+        </ElCheckbox>
+      </div>
+      <div class="filter-actions">
+        <ElButton type="primary" @click="search">搜索</ElButton>
+        <ElButton @click="reset">重置</ElButton>
+      </div>
     </section>
 
     <ElAlert v-if="errorMessage" class="page-alert" :title="errorMessage" type="error" :closable="false" />

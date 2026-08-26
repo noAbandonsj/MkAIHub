@@ -108,39 +108,45 @@ onMounted(() => void loadArtifacts())
     />
 
     <section class="filter-toolbar panel-card" aria-label="展品筛选">
-      <ElInput
-        v-model="query"
-        class="filter-search"
-        clearable
-        placeholder="搜索标题或摘要"
-        @keyup.enter="search"
-        @clear="search"
-      />
-      <ElCheckbox v-model="mine" @change="changeMine">只看我的</ElCheckbox>
-      <ElSelect
-        v-if="mine"
-        v-model="statusFilter"
-        class="filter-select"
-        placeholder="全部状态"
-        @change="changeStatus"
-      >
-        <ElOption label="全部状态" value="" />
-        <ElOption label="草稿" value="DRAFT" />
-        <ElOption label="已发布" value="PUBLISHED" />
-        <ElOption label="已归档" value="ARCHIVED" />
-      </ElSelect>
-      <ElSelect
-        v-model="sourceFilter"
-        class="filter-select"
-        placeholder="全部来源"
-        @change="changeSource"
-      >
-        <ElOption label="全部来源" value="" />
-        <ElOption label="任务成果" value="TASK_RESULT" />
-        <ElOption label="竞赛作品" value="COMPETITION_ENTRY" />
-      </ElSelect>
-      <ElButton type="primary" @click="search">搜索</ElButton>
-      <ElButton @click="reset">重置</ElButton>
+      <div class="filter-fields">
+        <ElInput
+          v-model="query"
+          class="filter-search"
+          clearable
+          placeholder="搜索标题或摘要"
+          @keyup.enter="search"
+          @clear="search"
+        />
+        <ElSelect
+          v-if="mine"
+          v-model="statusFilter"
+          class="filter-select"
+          placeholder="全部状态"
+          @change="changeStatus"
+        >
+          <ElOption label="全部状态" value="" />
+          <ElOption label="草稿" value="DRAFT" />
+          <ElOption label="已发布" value="PUBLISHED" />
+          <ElOption label="已归档" value="ARCHIVED" />
+        </ElSelect>
+        <ElSelect
+          v-model="sourceFilter"
+          class="filter-select"
+          placeholder="全部来源"
+          @change="changeSource"
+        >
+          <ElOption label="全部来源" value="" />
+          <ElOption label="任务成果" value="TASK_RESULT" />
+          <ElOption label="竞赛作品" value="COMPETITION_ENTRY" />
+        </ElSelect>
+      </div>
+      <div class="filter-options">
+        <ElCheckbox v-model="mine" @change="changeMine">只看我的</ElCheckbox>
+      </div>
+      <div class="filter-actions">
+        <ElButton type="primary" @click="search">搜索</ElButton>
+        <ElButton @click="reset">重置</ElButton>
+      </div>
     </section>
 
     <ElAlert v-if="errorMessage" class="page-alert" :title="errorMessage" type="error" :closable="false" />

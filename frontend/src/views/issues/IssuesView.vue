@@ -94,21 +94,27 @@ onMounted(() => void loadIssues())
     />
 
     <section class="filter-toolbar panel-card" aria-label="Issue 筛选">
-      <ElInput
-        v-model="query"
-        class="filter-search"
-        clearable
-        placeholder="搜索标题或正文"
-        @keyup.enter="search"
-        @clear="search"
-      />
-      <ElCheckbox v-model="mine" @change="changeFilter">只看我的</ElCheckbox>
-      <ElSelect v-model="statusFilter" class="filter-select" placeholder="全部状态" @change="changeFilter">
-        <ElOption label="全部状态" value="" />
-        <ElOption v-for="(label, value) in issueStatusLabels" :key="value" :label="label" :value="value" />
-      </ElSelect>
-      <ElButton type="primary" @click="search">搜索</ElButton>
-      <ElButton @click="reset">重置</ElButton>
+      <div class="filter-fields">
+        <ElInput
+          v-model="query"
+          class="filter-search"
+          clearable
+          placeholder="搜索标题或正文"
+          @keyup.enter="search"
+          @clear="search"
+        />
+        <ElSelect v-model="statusFilter" class="filter-select" placeholder="全部状态" @change="changeFilter">
+          <ElOption label="全部状态" value="" />
+          <ElOption v-for="(label, value) in issueStatusLabels" :key="value" :label="label" :value="value" />
+        </ElSelect>
+      </div>
+      <div class="filter-options">
+        <ElCheckbox v-model="mine" @change="changeFilter">只看我的</ElCheckbox>
+      </div>
+      <div class="filter-actions">
+        <ElButton type="primary" @click="search">搜索</ElButton>
+        <ElButton @click="reset">重置</ElButton>
+      </div>
     </section>
 
     <ElAlert v-if="errorMessage" class="page-alert" :title="errorMessage" type="error" :closable="false" />
