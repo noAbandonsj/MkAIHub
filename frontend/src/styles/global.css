@@ -861,6 +861,23 @@ a {
   overflow: auto;
 }
 
+.artifact-create-dialog {
+  max-width: 94vw;
+}
+
+.artifact-create-dialog .el-dialog__body {
+  max-height: calc(100vh - 150px);
+  overflow-y: auto;
+}
+
+.artifact-create-dialog .artifact-preview-panel {
+  top: 0;
+}
+
+.artifact-create-dialog-hint {
+  margin: 0 0 var(--mk-space-md);
+}
+
 .markdown-editor-input textarea {
   font-family: Consolas, 'SFMono-Regular', monospace;
   line-height: 1.65;

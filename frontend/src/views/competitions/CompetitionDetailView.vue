@@ -92,7 +92,7 @@ async function runRegistration(action: () => Promise<unknown>, successText: stri
 function registerCompetition(): void {
   void runRegistration(
     () => competitionsApi.register(competitionId.value),
-    '报名成功',
+    '报名成功，竞赛任务已自动领取',
   )
 }
 
@@ -186,7 +186,7 @@ onMounted(() => void loadCompetition())
                   />
                 </p>
                 <p v-else-if="isRegistered" class="muted-copy">
-                  尚未提交，进入任务页领取并提交成果。
+                  尚未提交，进入任务页创建或选择展品并提交成果。
                 </p>
                 <p
                   v-if="session.isAdmin && task.current_submission_count !== null && task.current_submission_count !== undefined"
@@ -244,7 +244,7 @@ onMounted(() => void loadCompetition())
               竞赛{{ competitionLifecycleLabels[competition.lifecycle_status] }}，报名已截止。
             </p>
             <p class="muted-copy">
-              个人报名；报名后在提交截止时间前可对每个竞赛任务提交多轮成果，以最后一轮为准。
+              个人报名；报名后自动领取全部竞赛任务，提交截止时间前可提交多轮成果，以最后一轮为准。
             </p>
           </section>
 

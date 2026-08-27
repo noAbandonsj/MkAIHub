@@ -151,6 +151,14 @@ public static class TaskClosureService
                     "The competition does not accept participation",
                     409);
             }
+            var registration = await db.FindRegistrationAsync(task.CompetitionId.Value, user.Id);
+            if (registration is null || registration.Status != RegistrationStatuses.Registered)
+            {
+                throw new AppError(
+                    "COMPETITION_REGISTRATION_REQUIRED",
+                    "A valid registration is required to participate in this competition",
+                    403);
+            }
         }
         var participant = await db.FindParticipantAsync(task.Id, user.Id);
         var now = DateTime.UtcNow;
@@ -188,6 +196,13 @@ public static class TaskClosureService
 
     public static async Task<TaskParticipant> LeaveTaskAsync(this AppDbContext db, TaskItem task, User user)
     {
+        if (task.CompetitionId is not null)
+        {
+            throw new AppError(
+                "COMPETITION_STATE_CONFLICT",
+                "Competition task participation is managed through competition registration",
+                409);
+        }
         var participant = await db.FindParticipantAsync(task.Id, user.Id);
         if (participant is null)
         {

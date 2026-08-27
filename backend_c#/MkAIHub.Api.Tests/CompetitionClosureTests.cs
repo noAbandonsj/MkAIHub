@@ -84,10 +84,6 @@ public sealed class CompetitionClosureTests
         int artifactId,
         string? note = null)
     {
-        using var joined = await client.PostActionAsync($"/api/v1/tasks/{taskId}/participants", headers);
-        Assert.True(
-            joined.StatusCode == HttpStatusCode.Created,
-            $"join failed: {(int)joined.StatusCode} {await joined.Content.ReadAsStringAsync()}");
         var payload = new Dictionary<string, object?> { ["artifact_id"] = artifactId };
         if (note is not null)
         {
@@ -147,14 +143,18 @@ public sealed class CompetitionClosureTests
             requiredTaskId = requiredTask.RootElement.GetProperty("id").GetInt32();
             Assert.Equal(competitionId, requiredTask.RootElement.GetProperty("competition_id").GetInt32());
         }
-        await AddTaskAsync(bossClient, boss, competitionId, new Dictionary<string, object?>
+        int optionalTaskId;
+        using (var optionalTask = await AddTaskAsync(bossClient, boss, competitionId, new Dictionary<string, object?>
         {
             ["title"] = "选做任务",
             ["required"] = false,
             ["sort_order"] = 2,
             ["max_score"] = "50.00",
             ["weight"] = "5.00",
-        });
+        }))
+        {
+            optionalTaskId = optionalTask.RootElement.GetProperty("id").GetInt32();
+        }
 
         // Registration needs a published competition: DRAFT stays invisible
         // to employees (404) and rejects even the administrator's registration.
@@ -176,15 +176,26 @@ public sealed class CompetitionClosureTests
         }
 
         await RegisterAsync(bClient, b, competitionId);
+        foreach (var taskId in new[] { requiredTaskId, optionalTaskId })
+        {
+            using var taskDetail = await bClient.GetAsync($"/api/v1/tasks/{taskId}");
+            using var body = await taskDetail.ReadJsonAsync();
+            Assert.Equal(
+                "ACTIVE",
+                body.RootElement.GetProperty("my_participation").GetProperty("status").GetString());
+            Assert.Equal(1, body.RootElement.GetProperty("participant_count").GetInt32());
+        }
         Assert.Equal(
             "COMPETITION_ALREADY_REGISTERED",
             await CodeAsync(await bClient.PostActionAsync(
                 $"/api/v1/competitions/{competitionId}/registrations", b)));
 
-        // Unregistered employees cannot submit competition tasks.
-        Assert.Equal(
-            HttpStatusCode.Created,
-            (await cClient.PostActionAsync($"/api/v1/tasks/{requiredTaskId}/participants", c)).StatusCode);
+        // Unregistered employees can neither join nor submit competition tasks.
+        using (var blockedJoin = await cClient.PostActionAsync($"/api/v1/tasks/{requiredTaskId}/participants", c))
+        {
+            Assert.Equal(HttpStatusCode.Forbidden, blockedJoin.StatusCode);
+            Assert.Equal("COMPETITION_REGISTRATION_REQUIRED", await CodeAsync(blockedJoin));
+        }
         int cArtifactId;
         using (var cArtifact = await cClient.PublishArtifactAsync(c, new { title = "C 的未报名成果" }))
         {
@@ -198,6 +209,13 @@ public sealed class CompetitionClosureTests
             Assert.Equal(HttpStatusCode.Forbidden, blocked.StatusCode);
             Assert.Equal("COMPETITION_REGISTRATION_REQUIRED", await CodeAsync(blocked));
         }
+
+        Assert.Equal(
+            "TASK_ALREADY_PARTICIPATED",
+            await CodeAsync(await bClient.PostActionAsync($"/api/v1/tasks/{requiredTaskId}/participants", b)));
+        Assert.Equal(
+            "COMPETITION_STATE_CONFLICT",
+            await CodeAsync(await bClient.DeleteAsync(b, $"/api/v1/tasks/{requiredTaskId}/participants/me")));
 
         // Registered participant submits, resubmits; only the last round counts.
         int bArtifactId;
@@ -606,6 +624,15 @@ public sealed class CompetitionClosureTests
                 b, $"/api/v1/competitions/{competitionId}/registrations/me")));
 
         await RegisterAsync(bClient, b, competitionId);
+        int participantId;
+        using (var taskDetail = await bClient.GetAsync($"/api/v1/tasks/{taskId}"))
+        {
+            using var body = await taskDetail.ReadJsonAsync();
+            participantId = body.RootElement.GetProperty("my_participation").GetProperty("id").GetInt32();
+            Assert.Equal(
+                "ACTIVE",
+                body.RootElement.GetProperty("my_participation").GetProperty("status").GetString());
+        }
         using (var cancelled = await bClient.DeleteAsync(
             b, $"/api/v1/competitions/{competitionId}/registrations/me"))
         {
@@ -619,9 +646,23 @@ public sealed class CompetitionClosureTests
             using var body = await detail.ReadJsonAsync();
             Assert.Equal(0, body.RootElement.GetProperty("registration_count").GetInt32());
         }
+        using (var taskDetail = await bClient.GetAsync($"/api/v1/tasks/{taskId}"))
+        {
+            using var body = await taskDetail.ReadJsonAsync();
+            Assert.Equal(
+                "LEFT",
+                body.RootElement.GetProperty("my_participation").GetProperty("status").GetString());
+        }
 
-        // Re-registering reuses the same row.
+        // Re-registering reuses both registration and participant rows.
         await RegisterAsync(bClient, b, competitionId);
+        using (var taskDetail = await bClient.GetAsync($"/api/v1/tasks/{taskId}"))
+        {
+            using var body = await taskDetail.ReadJsonAsync();
+            var participation = body.RootElement.GetProperty("my_participation");
+            Assert.Equal(participantId, participation.GetProperty("id").GetInt32());
+            Assert.Equal("ACTIVE", participation.GetProperty("status").GetString());
+        }
 
         // Submissions block cancellation.
         int artifactId;
@@ -732,10 +773,13 @@ public sealed class CompetitionClosureTests
         }
         await bossClient.PostActionAsync($"/api/v1/admin/competitions/{competitionId}/publish", boss);
         await RegisterAsync(bClient, b, competitionId);
-        // Join first: a disabled task still rejects non-participants with FORBIDDEN.
-        Assert.Equal(
-            HttpStatusCode.Created,
-            (await bClient.PostActionAsync($"/api/v1/tasks/{taskId}/participants", b)).StatusCode);
+        using (var taskDetail = await bClient.GetAsync($"/api/v1/tasks/{taskId}"))
+        {
+            using var body = await taskDetail.ReadJsonAsync();
+            Assert.Equal(
+                "ACTIVE",
+                body.RootElement.GetProperty("my_participation").GetProperty("status").GetString());
+        }
 
         using (var closed = await bossClient.PostActionAsync($"/api/v1/tasks/{taskId}/close", boss))
         {
@@ -772,9 +816,9 @@ public sealed class CompetitionClosureTests
             Assert.Equal(HttpStatusCode.Created, resubmitted.StatusCode);
         }
 
-        // Leaving a competition task with submissions is still blocked.
+        // Competition task participation cannot be changed independently.
         Assert.Equal(
-            "TASK_SUBMISSION_EXISTS",
+            "COMPETITION_STATE_CONFLICT",
             await CodeAsync(await bClient.DeleteAsync(b, $"/api/v1/tasks/{taskId}/participants/me")));
     }
 

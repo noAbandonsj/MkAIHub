@@ -116,6 +116,7 @@ describe('CompetitionDetailView 组件', () => {
 
     const text = wrapper.text()
     expect(text).toContain('报名参赛')
+    expect(text).toContain('报名后自动领取全部竞赛任务')
     expect(text).not.toContain('取消报名')
     expect(text).not.toContain('排行榜')
   })
@@ -204,7 +205,7 @@ describe('CompetitionDetailView 组件', () => {
     findButton(wrapper, '报名参赛').trigger('click')
     await flushPromises()
 
-    expect(ElMessage.success).toHaveBeenCalledWith('报名成功')
+    expect(ElMessage.success).toHaveBeenCalledWith('报名成功，竞赛任务已自动领取')
     expect(wrapper.text()).toContain('取消报名')
   })
 })

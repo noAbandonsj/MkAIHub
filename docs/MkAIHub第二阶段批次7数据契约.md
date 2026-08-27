@@ -407,14 +407,15 @@ POST   /api/v1/admin/competitions/{competition_id}/archive           归档 → 
 
 - `20260819_0006_closed_loop_tasks`（批次8）：`tasks.status` CHECK 扩展（batch 模式重建表）；新建 `task_participants`、`task_submissions`。
 - `20260819_0007_closed_loop_competitions`（批次9）：`tasks` 增加竞赛五列与约束索引（batch 模式重建表）；`competitions.status`；新建 `competition_registrations`、`competition_reviews`、`competition_results`。
+- `20260819_0008_auto_join_competition_tasks`（批次16）：为存量有效竞赛报名补齐全部竞赛任务的 `ACTIVE` 参与关系；取消或无效报名对应的孤立竞赛参与关系置为 `LEFT`，不删除历史提交或参与记录。
 
 兼容规则：
 
 - 从 `20260819_0005` 起连续升级，不修改历史迁移；两个迁移均提供完整 downgrade。
-- 存量数据默认值：任务 `competition_id` 为空（保持普通独立任务语义，`competition_*` 列全空）；存量竞赛 `status='PUBLISHED'`；五张新表为空，不伪造参与、提交、报名、评审或结果记录。
+- 存量数据默认值：任务 `competition_id` 为空（保持普通独立任务语义，`competition_*` 列全空）；存量竞赛 `status='PUBLISHED'`。`0007` 不伪造报名、评审或结果；`0008` 仅依据已有有效报名补齐竞赛任务参与关系，并将无有效报名且未产生提交的孤立关系置为 `LEFT`。
 - 存量任务状态 `OPEN`/`COMPLETED`/`CLOSED` 在新 CHECK 约束下仍合法，不需迁移值。
 - 升级后重跑备份恢复演练，并验证 SQLite 外键完整性（`PRAGMA foreign_key_check`）。
-- `backend_c#/MkAIHub.Api/Data/Migrator.cs` 本阶段不同步：C# 版停留在 `20260819_0005`，不能读写已升级到 `0006+` 的数据库，这是第二阶段暂缓同步的预期结果，待闭环稳定后另行评估。
+- `backend_c#/MkAIHub.Api/Data/Migrator.cs` 与 Python 版同步维护至 `0008`，两后端共用同一 SQLite 数据库和迁移语义。
 
 ## 9. 测试清单（先写测试，再实现）
 
@@ -422,7 +423,7 @@ POST   /api/v1/admin/competitions/{competition_id}/archive           归档 → 
 
 迁移：
 
-- 空库从零升级到 `0007`；从 `0005` 带数据升级到 `0006` 再到 `0007`；逐级降级回 `0005`。
+- 空库从零升级到 `0008`；从 `0005` 带数据升级到 `0006`、`0007`、`0008`；逐级降级回 `0005`。
 - 升级后存量任务为独立任务、存量竞赛 `PUBLISHED`；`PRAGMA foreign_key_check` 为空。
 - RESTRICT 生效验证：带参与/提交/报名/结果记录时删除被引用行失败。
 
@@ -474,7 +475,7 @@ POST   /api/v1/admin/competitions/{competition_id}/archive           归档 → 
 
 1. **运营状态字段名**：竞赛列表/详情的时间状态字段 `status`（`UPCOMING/ONGOING/ENDED`）自首版已存在，运营状态改用新字段 `lifecycle_status`（`DRAFT/PUBLISHED/RESULT_PUBLISHED/ARCHIVED`），两者并存输出。7.2 节"列表项新增 `status`"按此理解执行。
 2. **DRAFT 竞赛的任务可见性**：`competition_id` 指向 `DRAFT` 竞赛的任务对非管理员在任务列表不返回、详情返回 404（`TASK_NOT_FOUND`），避免绕过竞赛可见性规则。
-3. **领取竞赛任务的前置**：竞赛任务仅在父竞赛 `PUBLISHED` 时允许领取，否则 `COMPETITION_STATE_CONFLICT`；提交仍另行要求有效报名。
+3. **竞赛任务自动领取**：竞赛任务仅在父竞赛 `PUBLISHED` 且用户存在有效报名时可参与；报名成功自动为该竞赛全部任务创建或恢复 `ACTIVE` 参与关系，取消报名同步置为 `LEFT`。直接调用领取接口或退出竞赛任务均返回 `COMPETITION_REGISTRATION_REQUIRED`/`COMPETITION_STATE_CONFLICT`；提交仍要求有效报名。
 4. **归档后的结果可见性**：`ARCHIVED` 竞赛若已发布过结果，排行榜与评审信息保持可读（归档不撤回已发布结果）；`GET /competitions/{id}/results` 在 `RESULT_PUBLISHED` 与 `ARCHIVED` 状态下开放，其余状态 404。
 5. **发布结果的校验顺序**：先校验竞赛已结束（`COMPETITION_NOT_ENDED`），再校验评审齐全（`COMPETITION_REVIEWS_INCOMPLETE`）。
 6. **新增错误码**：`REGISTRATION_NOT_FOUND`（404，取消不存在的报名）、`COMPETITION_FIELD_LOCKED`（422，`PUBLISHED` 竞赛修改 `start_at`）、`COMPETITION_AWARD_INVALID`（422，奖项指向未排名或重复的报名）。

@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router'
 import {
   ElAlert,
   ElButton,
+  ElDialog,
   ElInput,
   ElMessage,
   ElMessageBox,
@@ -12,6 +13,7 @@ import {
 } from 'element-plus'
 import 'element-plus/es/components/alert/style/css'
 import 'element-plus/es/components/button/style/css'
+import 'element-plus/es/components/dialog/style/css'
 import 'element-plus/es/components/input/style/css'
 import 'element-plus/es/components/message/style/css'
 import 'element-plus/es/components/message-box/style/css'
@@ -22,11 +24,12 @@ import { artifactsApi } from '@/api/artifacts'
 import { getApiErrorMessage } from '@/api/client'
 import { taskSubmissionsApi } from '@/api/taskSubmissions'
 import { tasksApi } from '@/api/tasks'
+import ArtifactEditor from '@/components/artifact/ArtifactEditor.vue'
 import MarkdownViewer from '@/components/artifact/MarkdownViewer.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import { routeNames } from '@/router/route-names'
 import { useSessionStore } from '@/stores/session'
-import type { ArtifactListItem } from '@/types/artifact'
+import type { ArtifactListItem, ArtifactRead } from '@/types/artifact'
 import type { TaskParticipant, TaskRead, TaskSubmission } from '@/types/task'
 import { formatDate } from '@/utils/format'
 import {
@@ -51,6 +54,7 @@ const myArtifacts = ref<ArtifactListItem[]>([])
 const loading = ref(false)
 const actionLoading = ref(false)
 const submitLoading = ref(false)
+const artifactDialogVisible = ref(false)
 const decideLoadingId = ref<number | null>(null)
 const errorMessage = ref('')
 const submitArtifactId = ref<number | null>(null)
@@ -246,6 +250,13 @@ async function submitResult(): Promise<void> {
   }
 }
 
+function handleArtifactSaved(artifact: ArtifactRead): void {
+  myArtifacts.value = [artifact, ...myArtifacts.value.filter((item) => item.id !== artifact.id)]
+  submitArtifactId.value = artifact.id
+  artifactDialogVisible.value = false
+  ElMessage.success('展品已创建并发布，已自动选中')
+}
+
 async function promptNote(title: string, required: boolean): Promise<string | null> {
   try {
     const result = await ElMessageBox.prompt(
@@ -380,16 +391,10 @@ onMounted(() => {
               />
               <div class="task-submit-actions">
                 <ElButton type="primary" :loading="submitLoading" @click="submitResult">提交成果</ElButton>
-                <RouterLink
-                  class="secondary-action"
-                  :to="{ name: routeNames.artifactNew }"
-                  target="_blank"
-                >
-                  去新建展品
-                </RouterLink>
+                <ElButton @click="artifactDialogVisible = true">新建展品</ElButton>
               </div>
               <p v-if="!myArtifacts.length" class="muted-copy">
-                还没有可提交的已发布展品，可先在展品模块创建并发布。
+                还没有可提交的已发布展品，可在这里直接创建并发布。
               </p>
             </div>
             <p v-else-if="isActiveParticipant">
@@ -601,12 +606,15 @@ onMounted(() => {
 
           <section class="panel-card detail-action-card">
             <h2>参与任务</h2>
-            <template v-if="!isTerminal">
+            <template v-if="!isTerminal && !isCompetitionTask">
               <ElButton v-if="!myParticipation || myParticipation.status === 'LEFT'" type="primary" :loading="actionLoading" @click="joinTask">
                 领取任务
               </ElButton>
               <ElButton v-if="isActiveParticipant" :loading="actionLoading" @click="leaveTask">退出参与</ElButton>
             </template>
+            <p v-if="isCompetitionTask" class="muted-copy">
+              竞赛任务由报名自动领取；如需参与或退出，请到所属竞赛处理报名。
+            </p>
             <p v-if="myParticipation" class="muted-copy">
               我的参与状态：{{ participantStatusLabels[myParticipation.status] }}
             </p>
@@ -620,5 +628,23 @@ onMounted(() => {
         </aside>
       </article>
     </template>
+
+    <ElDialog
+      v-model="artifactDialogVisible"
+      class="artifact-create-dialog"
+      title="新建任务展品"
+      width="1120px"
+      destroy-on-close
+    >
+      <p class="muted-copy artifact-create-dialog-hint">
+        创建并发布后会自动选中这条展品；关闭弹窗后仍需点击“提交成果”完成任务提交。
+      </p>
+      <ArtifactEditor
+        v-if="artifactDialogVisible"
+        mode="create"
+        :allow-draft="false"
+        @saved="handleArtifactSaved"
+      />
+    </ElDialog>
   </div>
 </template>

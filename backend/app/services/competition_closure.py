@@ -83,6 +83,52 @@ def find_registration(db: Session, competition_id: int, user_id: int) -> Competi
     )
 
 
+def _sync_registration_participants(
+    db: Session,
+    competition_id: int,
+    user_id: int,
+    *,
+    active: bool,
+    changed_at: datetime,
+) -> None:
+    """Keep competition-task participation aligned with one registration."""
+
+    tasks = list(db.scalars(select(Task).where(Task.competition_id == competition_id)).all())
+    if not tasks:
+        return
+    task_ids = [task.id for task in tasks]
+    participants = {
+        participant.task_id: participant
+        for participant in db.scalars(
+            select(TaskParticipant).where(
+                TaskParticipant.user_id == user_id,
+                TaskParticipant.task_id.in_(task_ids),
+            )
+        ).all()
+    }
+    for task in tasks:
+        participant = participants.get(task.id)
+        if active:
+            if participant is None:
+                db.add(
+                    TaskParticipant(
+                        task_id=task.id,
+                        user_id=user_id,
+                        status="ACTIVE",
+                        joined_at=changed_at,
+                    )
+                )
+                continue
+            participant.status = "ACTIVE"
+            participant.joined_at = changed_at
+            participant.left_at = None
+            participant.updated_at = changed_at
+        elif participant is not None:
+            participant.status = "LEFT"
+            participant.left_at = changed_at
+            participant.updated_at = changed_at
+
+
 def register_competition(db: Session, competition: Competition, user: User) -> CompetitionRegistration:
     if competition.status != PUBLISHED:
         raise AppError(
@@ -116,6 +162,13 @@ def register_competition(db: Session, competition: Competition, user: User) -> C
         registration.status = REGISTERED
         registration.registered_at = now
         registration.cancelled_at = None
+    _sync_registration_participants(
+        db,
+        competition.id,
+        user.id,
+        active=True,
+        changed_at=now,
+    )
     db.commit()
     db.refresh(registration)
     return registration
@@ -141,8 +194,16 @@ def cancel_registration(db: Session, competition: Competition, user: User) -> Co
             "A registrant with submissions cannot cancel the registration",
             status_code=409,
         )
+    now = _utcnow()
     registration.status = CANCELLED
-    registration.cancelled_at = _utcnow()
+    registration.cancelled_at = now
+    _sync_registration_participants(
+        db,
+        competition.id,
+        user.id,
+        active=False,
+        changed_at=now,
+    )
     db.commit()
     db.refresh(registration)
     return registration
@@ -359,7 +420,6 @@ def create_competition_submission(
     """Submit a round to a competition task: registration and window gated."""
 
     competition = db.get(Competition, task.competition_id)
-    participant = _require_active_participant(db, task, user)
     registration = find_registration(db, task.competition_id, user.id)
     if registration is None or registration.status != REGISTERED:
         raise AppError(
@@ -367,6 +427,7 @@ def create_competition_submission(
             "A valid registration is required to submit to this competition",
             status_code=403,
         )
+    participant = _require_active_participant(db, task, user)
     if task.status != "OPEN":
         raise AppError(
             "COMPETITION_STATE_CONFLICT",

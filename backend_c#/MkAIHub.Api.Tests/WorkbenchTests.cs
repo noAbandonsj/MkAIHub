@@ -89,10 +89,6 @@ public sealed class WorkbenchTests
             HttpStatusCode.Created,
             (await memberClient.PostActionAsync(
                 $"/api/v1/competitions/{competitionId}/registrations", member)).StatusCode);
-        Assert.Equal(
-            HttpStatusCode.Created,
-            (await memberClient.PostActionAsync(
-                $"/api/v1/tasks/{competitionTaskId}/participants", member)).StatusCode);
         int competitionArtifactId;
         using (var artifact = await memberClient.PublishArtifactAsync(member, new { title = "竞赛任务成果" }))
         {

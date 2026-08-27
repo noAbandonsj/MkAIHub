@@ -38,9 +38,6 @@ def test_workbench_counts_statistics_and_cross_module_filters(client, test_setti
             f"/api/v1/admin/competitions/{competition['id']}/publish", headers=boss
         ).status_code == 200
         register(member_c, member, competition["id"])
-        assert member_c.post(
-            f"/api/v1/tasks/{competition_task['id']}/participants", headers=member
-        ).status_code == 201
         competition_artifact = publish_artifact(member_c, member, title="竞赛任务成果")
         competition_submission = member_c.post(
             f"/api/v1/tasks/{competition_task['id']}/submissions",

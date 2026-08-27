@@ -43,7 +43,15 @@ vi.mock('@/api/taskSubmissions', () => ({
   },
 }))
 vi.mock('@/api/artifacts', () => ({
-  artifactsApi: { list: vi.fn() },
+  artifactsApi: {
+    list: vi.fn(),
+    get: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    publish: vi.fn(),
+    upload: vi.fn(),
+    deleteFile: vi.fn(),
+  },
 }))
 vi.mock('@/api/admin', () => ({
   adminApi: { reopenTask: vi.fn() },
@@ -55,7 +63,8 @@ import { artifactsApi } from '@/api/artifacts'
 import { taskSubmissionsApi } from '@/api/taskSubmissions'
 import { tasksApi } from '@/api/tasks'
 import { useSessionStore } from '@/stores/session'
-import type { ArtifactListItem } from '@/types/artifact'
+import ArtifactEditor from '@/components/artifact/ArtifactEditor.vue'
+import type { ArtifactListItem, ArtifactRead } from '@/types/artifact'
 import type { TaskParticipant, TaskRead, TaskSubmission } from '@/types/task'
 import type { UserRead } from '@/types/user'
 import TaskDetailView from './TaskDetailView.vue'
@@ -169,6 +178,16 @@ function makeArtifact(overrides: Partial<ArtifactListItem> = {}): ArtifactListIt
   }
 }
 
+function makeArtifactRead(overrides: Partial<ArtifactRead> = {}): ArtifactRead {
+  return {
+    ...makeArtifact({ id: 41, title: '任务中新建的展品' }),
+    content_markdown: '# 任务成果',
+    archived_at: null,
+    files: [],
+    ...overrides,
+  }
+}
+
 interface Deferred<T> {
   promise: Promise<T>
   resolve: (value: T) => void
@@ -260,6 +279,46 @@ describe('TaskDetailView 组件', () => {
     expect(text).toContain('选择我的已发布展品')
     expect(text).not.toContain('领取任务')
     expect(text).not.toContain('成果验收')
+  })
+
+  it('竞赛报名自动领取任务，任务页不允许单独领取或退出', async () => {
+    const participation = makeParticipant()
+    const wrapper = await mountWithTask(
+      makeTask({
+        competition_id: 5,
+        competition_title: '提示词大赛',
+        my_participation: participation,
+        participant_count: 1,
+      }),
+      { participants: [participation], artifacts: [makeArtifact()] },
+    )
+
+    const text = wrapper.text()
+    expect(text).toContain('竞赛任务由报名自动领取')
+    expect(text).not.toContain('领取任务')
+    expect(text).not.toContain('退出参与')
+    expect(text).toContain('成果提交')
+  })
+
+  it('任务页弹窗新建展品后自动选中，不跳转独立页面', async () => {
+    const participation = makeParticipant()
+    const wrapper = await mountWithTask(
+      makeTask({ my_participation: participation }),
+      { participants: [participation], artifacts: [] },
+    )
+
+    findButton(wrapper, '新建展品').trigger('click')
+    await wrapper.vm.$nextTick()
+    const editor = wrapper.findComponent(ArtifactEditor)
+    expect(editor.exists()).toBe(true)
+    expect(editor.props('allowDraft')).toBe(false)
+
+    editor.vm.$emit('saved', makeArtifactRead(), true)
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.findComponent({ name: 'ElSelect' }).props('modelValue')).toBe(41)
+    expect(ElMessage.success).toHaveBeenCalledWith('展品已创建并发布，已自动选中')
+    expect(wrapper.findComponent(ArtifactEditor).exists()).toBe(false)
   })
 
   it('发布人看到验收区与任务管理按钮', async () => {

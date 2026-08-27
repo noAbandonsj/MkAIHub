@@ -53,6 +53,56 @@ public static class CompetitionClosureService
             .FirstOrDefaultAsync(registration =>
                 registration.CompetitionId == competitionId && registration.UserId == userId);
 
+    private static async Task SyncRegistrationParticipantsAsync(
+        AppDbContext db,
+        int competitionId,
+        int userId,
+        bool active,
+        DateTime changedAt)
+    {
+        var taskIds = await db.Tasks
+            .Where(task => task.CompetitionId == competitionId)
+            .Select(task => task.Id)
+            .ToListAsync();
+        if (taskIds.Count == 0)
+        {
+            return;
+        }
+        var participants = await db.TaskParticipants
+            .Where(participant => participant.UserId == userId && taskIds.Contains(participant.TaskId))
+            .ToDictionaryAsync(participant => participant.TaskId);
+        foreach (var taskId in taskIds)
+        {
+            participants.TryGetValue(taskId, out var participant);
+            if (active)
+            {
+                if (participant is null)
+                {
+                    db.TaskParticipants.Add(new TaskParticipant
+                    {
+                        TaskId = taskId,
+                        UserId = userId,
+                        Status = TaskClosureService.Active,
+                        JoinedAt = changedAt,
+                        CreatedAt = changedAt,
+                        UpdatedAt = changedAt,
+                    });
+                    continue;
+                }
+                participant.Status = TaskClosureService.Active;
+                participant.JoinedAt = changedAt;
+                participant.LeftAt = null;
+                participant.UpdatedAt = changedAt;
+            }
+            else if (participant is not null)
+            {
+                participant.Status = TaskClosureService.Left;
+                participant.LeftAt = changedAt;
+                participant.UpdatedAt = changedAt;
+            }
+        }
+    }
+
     public static async Task<CompetitionRegistration> RegisterCompetitionAsync(
         this AppDbContext db, Competition competition, User user)
     {
@@ -100,6 +150,7 @@ public static class CompetitionClosureService
             registration.CancelledAt = null;
             registration.UpdatedAt = now;
         }
+        await SyncRegistrationParticipantsAsync(db, competition.Id, user.Id, active: true, now);
         await db.SaveChangesAsync();
         return registration;
     }
@@ -129,9 +180,11 @@ public static class CompetitionClosureService
                 "A registrant with submissions cannot cancel the registration",
                 409);
         }
+        var now = DateTime.UtcNow;
         registration.Status = RegistrationStatuses.Cancelled;
-        registration.CancelledAt = DateTime.UtcNow;
-        registration.UpdatedAt = DateTime.UtcNow;
+        registration.CancelledAt = now;
+        registration.UpdatedAt = now;
+        await SyncRegistrationParticipantsAsync(db, competition.Id, user.Id, active: false, now);
         await db.SaveChangesAsync();
         return registration;
     }
@@ -347,11 +400,6 @@ public static class CompetitionClosureService
         this AppDbContext db, TaskItem task, User user, int artifactId, string? note)
     {
         var competition = await db.Competitions.FindAsync(task.CompetitionId);
-        var participant = await db.FindParticipantAsync(task.Id, user.Id);
-        if (participant is null || participant.Status != TaskClosureService.Active)
-        {
-            throw new AppError("FORBIDDEN", "Only an active participant can submit to this task", 403);
-        }
         var registration = await db.FindRegistrationAsync(task.CompetitionId!.Value, user.Id);
         if (registration is null || registration.Status != RegistrationStatuses.Registered)
         {
@@ -359,6 +407,11 @@ public static class CompetitionClosureService
                 "COMPETITION_REGISTRATION_REQUIRED",
                 "A valid registration is required to submit to this competition",
                 403);
+        }
+        var participant = await db.FindParticipantAsync(task.Id, user.Id);
+        if (participant is null || participant.Status != TaskClosureService.Active)
+        {
+            throw new AppError("FORBIDDEN", "Only an active participant can submit to this task", 403);
         }
         if (task.Status != TaskStatuses.Open)
         {

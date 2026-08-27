@@ -110,7 +110,7 @@ public sealed class DatabaseTests
                 tables.ToHashSet());
 
             Assert.Equal(Migrator.Head, QueryString(connection, "SELECT version_num FROM alembic_version"));
-            Assert.Equal("20260819_0007", Migrator.Head);
+            Assert.Equal("20260819_0008", Migrator.Head);
 
             // The closed-loop rebuild keeps the widened task status CHECK and the
             // competition lifecycle CHECK delivered by migrations 0006/0007.
@@ -130,6 +130,69 @@ public sealed class DatabaseTests
             Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
             Directory.Delete(root, recursive: true);
         }
+    }
+
+    [Fact]
+    public void MigratorBackfillsCompetitionTaskParticipants()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "mkaihub-csharp-tests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        var databasePath = Path.Combine(root, "migration-auto-participants.db");
+        try
+        {
+            Migrator.UpgradeToHead(databasePath);
+            using (var connection = Database.OpenSqlite(databasePath))
+            {
+                Execute(connection,
+                    "INSERT INTO users (id, username, display_name, password_hash, role, is_active, created_at, updated_at) "
+                    + "VALUES (101, 'registered', 'Registered', 'x', 'EMPLOYEE', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP), "
+                    + "(102, 'orphan', 'Orphan', 'x', 'EMPLOYEE', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)");
+                Execute(connection,
+                    "INSERT INTO competitions (id, title, summary, rules_markdown, start_at, end_at, status, created_by, created_at, updated_at) "
+                    + "VALUES (201, '自动领取赛', 's', 'r', '2020-01-01 00:00:00', '2999-01-01 00:00:00', "
+                    + "'PUBLISHED', 101, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)");
+                Execute(connection,
+                    "INSERT INTO tasks (id, title, description, creator_id, status, competition_id, competition_required, "
+                    + "competition_sort_order, competition_max_score, competition_weight, created_at, updated_at) VALUES "
+                    + "(301, '必做', 'd', 101, 'OPEN', 201, 1, 1, 30.00, 10.00, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP), "
+                    + "(302, '选做', 'd', 101, 'OPEN', 201, 0, 2, 30.00, 10.00, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)");
+                Execute(connection,
+                    "INSERT INTO competition_registrations "
+                    + "(id, competition_id, user_id, status, registered_at, created_at, updated_at) "
+                    + "VALUES (401, 201, 101, 'REGISTERED', '2026-08-27 01:02:03', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)");
+                Execute(connection,
+                    "INSERT INTO task_participants "
+                    + "(id, task_id, user_id, status, joined_at, left_at, created_at, updated_at) VALUES "
+                    + "(501, 301, 101, 'LEFT', '2026-08-26 01:00:00', '2026-08-26 02:00:00', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP), "
+                    + "(502, 301, 102, 'ACTIVE', CURRENT_TIMESTAMP, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)");
+                Execute(connection, "UPDATE alembic_version SET version_num = '20260819_0007'");
+            }
+
+            Migrator.UpgradeToHead(databasePath);
+            using var verified = Database.OpenSqlite(databasePath);
+            Assert.Equal(
+                2L,
+                QueryLong(
+                    verified,
+                    "SELECT COUNT(*) FROM task_participants WHERE user_id = 101 AND status = 'ACTIVE' AND left_at IS NULL"));
+            Assert.Equal(
+                "LEFT",
+                QueryString(verified, "SELECT status FROM task_participants WHERE id = 502"));
+            Assert.Equal(Migrator.Head, QueryString(verified, "SELECT version_num FROM alembic_version"));
+            Assert.Equal(0L, QueryLong(verified, "SELECT COUNT(*) FROM pragma_foreign_key_check"));
+        }
+        finally
+        {
+            Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    private static void Execute(Microsoft.Data.Sqlite.SqliteConnection connection, string sql)
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = sql;
+        command.ExecuteNonQuery();
     }
 
     private static long QueryLong(Microsoft.Data.Sqlite.SqliteConnection connection, string sql)

@@ -57,8 +57,6 @@ def join_and_submit(
     artifact: dict,
     note: str | None = None,
 ) -> dict:
-    joined = client.post(f"/api/v1/tasks/{task_id}/participants", headers=headers)
-    assert joined.status_code == 201, joined.text
     payload = {"artifact_id": artifact["id"]}
     if note is not None:
         payload["note"] = note
@@ -119,13 +117,18 @@ def test_competition_closure_full_flow(client: TestClient, test_settings) -> Non
 
         registration = register(b_c, b, competition_id)
         assert registration["status"] == "REGISTERED"
+        for task in (required_task, optional_task):
+            detail = b_c.get(f"/api/v1/tasks/{task['id']}", headers=b).json()
+            assert detail["my_participation"]["status"] == "ACTIVE"
+            assert detail["participant_count"] == 1
         duplicated = b_c.post(f"/api/v1/competitions/{competition_id}/registrations", headers=b)
         assert duplicated.status_code == 409
         assert duplicated.json()["code"] == "COMPETITION_ALREADY_REGISTERED"
 
-        # Unregistered employees cannot submit competition tasks.
+        # Unregistered employees can neither join nor submit competition tasks.
         c_joined = c_c.post(f"/api/v1/tasks/{required_task['id']}/participants", headers=c)
-        assert c_joined.status_code == 201
+        assert c_joined.status_code == 403
+        assert c_joined.json()["code"] == "COMPETITION_REGISTRATION_REQUIRED"
         c_artifact = publish_artifact(c_c, c, title="C 的未报名成果")
         blocked = c_c.post(
             f"/api/v1/tasks/{required_task['id']}/submissions",
@@ -134,6 +137,14 @@ def test_competition_closure_full_flow(client: TestClient, test_settings) -> Non
         )
         assert blocked.status_code == 403
         assert blocked.json()["code"] == "COMPETITION_REGISTRATION_REQUIRED"
+
+        # Competition-task participation is managed only through registration.
+        assert b_c.post(
+            f"/api/v1/tasks/{required_task['id']}/participants", headers=b
+        ).json()["code"] == "TASK_ALREADY_PARTICIPATED"
+        assert b_c.delete(
+            f"/api/v1/tasks/{required_task['id']}/participants/me", headers=b
+        ).json()["code"] == "COMPETITION_STATE_CONFLICT"
 
         # Registered participant submits, resubmits; only the last round counts.
         b_artifact = publish_artifact(b_c, b, title="B 的竞赛成果")
@@ -363,6 +374,8 @@ def test_registration_cancel_and_config_lock(client: TestClient, test_settings) 
         ).json()["code"] == "REGISTRATION_NOT_FOUND"
 
         register(b_c, b, competition_id)
+        active = b_c.get(f"/api/v1/tasks/{task['id']}", headers=b).json()["my_participation"]
+        assert active["status"] == "ACTIVE"
         cancelled = b_c.delete(
             f"/api/v1/competitions/{competition_id}/registrations/me", headers=b
         )
@@ -370,10 +383,15 @@ def test_registration_cancel_and_config_lock(client: TestClient, test_settings) 
         assert cancelled.json()["status"] == "CANCELLED"
         assert cancelled.json()["cancelled_at"] is not None
         assert b_c.get(f"/api/v1/competitions/{competition_id}", headers=b).json()["registration_count"] == 0
+        left = b_c.get(f"/api/v1/tasks/{task['id']}", headers=b).json()["my_participation"]
+        assert left["status"] == "LEFT"
 
-        # Re-registering reuses the same row.
+        # Re-registering reuses both registration and participant rows.
         again = register(b_c, b, competition_id)
         assert again["status"] == "REGISTERED"
+        reactivated = b_c.get(f"/api/v1/tasks/{task['id']}", headers=b).json()["my_participation"]
+        assert reactivated["id"] == left["id"]
+        assert reactivated["status"] == "ACTIVE"
 
         # Submissions block cancellation.
         artifact = publish_artifact(b_c, b, title="锁定配置的成果")
@@ -449,9 +467,9 @@ def test_competition_task_disable_and_reopen(client: TestClient, test_settings) 
         task = add_task(boss_c, boss, competition_id)
         boss_c.post(f"/api/v1/admin/competitions/{competition_id}/publish", headers=boss)
         register(b_c, b, competition_id)
-        # Join first: a disabled task still rejects non-participants with FORBIDDEN.
-        joined = b_c.post(f"/api/v1/tasks/{task['id']}/participants", headers=b)
-        assert joined.status_code == 201
+        assert b_c.get(f"/api/v1/tasks/{task['id']}", headers=b).json()["my_participation"]["status"] == (
+            "ACTIVE"
+        )
 
         closed = boss_c.post(f"/api/v1/tasks/{task['id']}/close", headers=boss)
         assert closed.status_code == 200
@@ -472,9 +490,9 @@ def test_competition_task_disable_and_reopen(client: TestClient, test_settings) 
         )
         assert resubmitted.status_code == 201
 
-        # Leaving a competition task with submissions is still blocked.
+        # Competition task participation cannot be changed independently.
         assert b_c.delete(f"/api/v1/tasks/{task['id']}/participants/me", headers=b).json()["code"] == (
-            "TASK_SUBMISSION_EXISTS"
+            "COMPETITION_STATE_CONFLICT"
         )
 
 

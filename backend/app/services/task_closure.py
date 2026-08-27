@@ -163,6 +163,19 @@ def join_task(db: Session, task: Task, user: User) -> TaskParticipant:
                 "The competition does not accept participation",
                 status_code=409,
             )
+        registration = db.scalar(
+            select(CompetitionRegistration).where(
+                CompetitionRegistration.competition_id == task.competition_id,
+                CompetitionRegistration.user_id == user.id,
+                CompetitionRegistration.status == "REGISTERED",
+            )
+        )
+        if registration is None:
+            raise AppError(
+                "COMPETITION_REGISTRATION_REQUIRED",
+                "A valid registration is required to participate in this competition",
+                status_code=403,
+            )
     participant = find_participant(db, task.id, user.id)
     now = _utcnow()
     if participant is None:
@@ -186,6 +199,12 @@ def join_task(db: Session, task: Task, user: User) -> TaskParticipant:
 
 
 def leave_task(db: Session, task: Task, user: User) -> TaskParticipant:
+    if task.competition_id is not None:
+        raise AppError(
+            "COMPETITION_STATE_CONFLICT",
+            "Competition task participation is managed through competition registration",
+            status_code=409,
+        )
     participant = find_participant(db, task.id, user.id)
     if participant is None:
         raise AppError("PARTICIPANT_NOT_FOUND", "You do not participate in this task", status_code=404)
