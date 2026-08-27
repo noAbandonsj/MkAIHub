@@ -55,6 +55,8 @@ public sealed class TaskTests
                 "2026-09-01T12:00:00Z",
                 task.RootElement.GetProperty("deadline_at").GetString());
             Assert.EndsWith("Z", task.RootElement.GetProperty("created_at").GetString());
+            Assert.Equal(0, task.RootElement.GetProperty("participant_count").GetInt32());
+            Assert.Equal(0, task.RootElement.GetProperty("submission_count").GetInt32());
         }
 
         using (var updated = await client.PatchJsonAsync(
@@ -100,6 +102,42 @@ public sealed class TaskTests
             }
         }
 
+        // Completing without an accepted submission is rejected with the
+        // dedicated code, regardless of the current status.
+        using (var premature = await StateActionAsync(client, creatorHeaders, $"/api/v1/tasks/{taskId}/complete"))
+        {
+            Assert.Equal(HttpStatusCode.Conflict, premature.StatusCode);
+            using var body = await premature.ReadJsonAsync();
+            Assert.Equal("TASK_NO_ACCEPTED_RESULT", body.RootElement.GetProperty("code").GetString());
+        }
+
+        // Join, submit, accept, then complete through the closure loop.
+        using (var joined = await client.PostActionAsync($"/api/v1/tasks/{taskId}/participants", creatorHeaders))
+        {
+            Assert.Equal(HttpStatusCode.Created, joined.StatusCode);
+        }
+        int artifactId;
+        using (var artifact = await client.PublishArtifactAsync(creatorHeaders))
+        {
+            artifactId = artifact.RootElement.GetProperty("id").GetInt32();
+        }
+        int submissionId;
+        using (var submitted = await client.PostJsonAsync(
+            $"/api/v1/tasks/{taskId}/submissions",
+            new { artifact_id = artifactId },
+            creatorHeaders))
+        {
+            Assert.Equal(HttpStatusCode.Created, submitted.StatusCode);
+            using var body = await submitted.ReadJsonAsync();
+            submissionId = body.RootElement.GetProperty("id").GetInt32();
+        }
+        using (var accepted = await client.PostJsonAsync(
+            $"/api/v1/task-submissions/{submissionId}/accept",
+            new { note = "验收通过" },
+            creatorHeaders))
+        {
+            Assert.Equal(HttpStatusCode.OK, accepted.StatusCode);
+        }
         using (var completed = await StateActionAsync(client, creatorHeaders, $"/api/v1/tasks/{taskId}/complete"))
         {
             Assert.Equal(HttpStatusCode.OK, completed.StatusCode);
@@ -189,6 +227,11 @@ public sealed class TaskTests
         {
             using var body = await detail.ReadJsonAsync();
             Assert.NotNull(body.RootElement.GetProperty("description").GetString());
+            Assert.Equal(1, body.RootElement.GetProperty("participant_count").GetInt32());
+            Assert.Equal(1, body.RootElement.GetProperty("submission_count").GetInt32());
+            Assert.Equal(
+                "ACTIVE",
+                body.RootElement.GetProperty("my_participation").GetProperty("status").GetString());
         }
     }
 
@@ -273,12 +316,5 @@ public sealed class TaskTests
         HttpClient client,
         Dictionary<string, string> headers,
         string url)
-    {
-        var request = new HttpRequestMessage(HttpMethod.Post, url);
-        foreach (var (key, value) in headers)
-        {
-            request.Headers.TryAddWithoutValidation(key, value);
-        }
-        return await client.SendAsync(request);
-    }
+        => await client.PostActionAsync(url, headers);
 }

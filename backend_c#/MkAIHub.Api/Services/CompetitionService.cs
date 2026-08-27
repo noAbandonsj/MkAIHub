@@ -15,11 +15,11 @@ public static class CompetitionService
     public static string CompetitionStatus(Competition competition, DateTime? now = null)
     {
         var current = now ?? DateTime.UtcNow;
-        if (current < competition.StartAt)
+        if (current < Database.AsUtc(competition.StartAt))
         {
             return CompetitionStatuses.Upcoming;
         }
-        if (current < competition.EndAt)
+        if (current < Database.AsUtc(competition.EndAt))
         {
             return CompetitionStatuses.Ongoing;
         }
@@ -48,21 +48,51 @@ public static class CompetitionService
             competition.Summary,
             ArtifactService.ToSummary(competition.Creator!),
             CompetitionStatus(competition),
+            competition.Status,
             competition.StartAt,
             competition.EndAt,
             competition.CreatedAt,
             competition.UpdatedAt);
 
-    public static CompetitionReadDto ToRead(Competition competition)
-        => new(
-            competition.Id,
-            competition.Title,
-            competition.Summary,
-            ArtifactService.ToSummary(competition.Creator!),
-            CompetitionStatus(competition),
-            competition.StartAt,
-            competition.EndAt,
-            competition.CreatedAt,
-            competition.UpdatedAt,
-            competition.RulesMarkdown);
+    public static async Task<CompetitionReadDto> ToReadAsync(
+        this AppDbContext db, Competition competition, User? viewer = null)
+    {
+        var taskCount = await db.Tasks.CountAsync(task => task.CompetitionId == competition.Id);
+        var registrationCount = await db.CompetitionRegistrations.CountAsync(registration =>
+            registration.CompetitionId == competition.Id
+            && registration.Status == RegistrationStatuses.Registered);
+        CompetitionRegistrationSummaryDto? myRegistration = null;
+        if (viewer is not null)
+        {
+            var registration = await db.CompetitionRegistrations.FirstOrDefaultAsync(item =>
+                item.CompetitionId == competition.Id && item.UserId == viewer.Id);
+            if (registration is not null)
+            {
+                myRegistration = new CompetitionRegistrationSummaryDto(
+                    registration.Id,
+                    registration.Status,
+                    registration.RegisteredAt,
+                    registration.CancelledAt);
+            }
+        }
+        var resultsPublished = await db.CompetitionResults.AnyAsync(result =>
+            result.CompetitionId == competition.Id);
+        var item = ToListItem(competition);
+        return new CompetitionReadDto(
+            item.Id,
+            item.Title,
+            item.Summary,
+            item.Creator,
+            item.Status,
+            item.LifecycleStatus,
+            item.StartAt,
+            item.EndAt,
+            item.CreatedAt,
+            item.UpdatedAt,
+            competition.RulesMarkdown,
+            taskCount,
+            registrationCount,
+            myRegistration,
+            resultsPublished);
+    }
 }

@@ -347,6 +347,65 @@ public static class TestHttp
         return JsonDocument.Parse(text);
     }
 
+    /// <summary>Create a draft artifact and publish it (closure-loop helper).</summary>
+    public static async Task<JsonDocument> PublishArtifactAsync(
+        this HttpClient client,
+        Dictionary<string, string> headers,
+        object? overrides = null)
+    {
+        using var draft = await client.CreateDraftAsync(headers, overrides);
+        var artifactId = draft.RootElement.GetProperty("id").GetInt32();
+        using var response = await client.PostActionAsync($"/api/v1/artifacts/{artifactId}/publish", headers);
+        var text = await response.Content.ReadAsStringAsync();
+        Assert.True(
+            response.StatusCode == System.Net.HttpStatusCode.OK,
+            $"publish failed: {(int)response.StatusCode} {text}");
+        return JsonDocument.Parse(text);
+    }
+
+    /// <summary>POST without a JSON body, carrying auth/CSRF headers.</summary>
+    public static async Task<HttpResponseMessage> PostActionAsync(
+        this HttpClient client,
+        string url,
+        Dictionary<string, string> headers)
+        => await client.SendAsync(url, HttpMethod.Post, null, headers);
+
+    /// <summary>GET with auth/CSRF headers (needed for CSRF-guarded admin reads).</summary>
+    public static async Task<HttpResponseMessage> GetAsync(
+        this HttpClient client,
+        string url,
+        Dictionary<string, string> headers)
+        => await client.SendAsync(url, HttpMethod.Get, null, headers);
+
+    /// <summary>DELETE with auth/CSRF headers and no body.</summary>
+    public static async Task<HttpResponseMessage> DeleteAsync(
+        this HttpClient client,
+        Dictionary<string, string> headers,
+        string url)
+        => await client.SendAsync(url, HttpMethod.Delete, null, headers);
+
+    private static async Task<HttpResponseMessage> SendAsync(
+        this HttpClient client,
+        string url,
+        HttpMethod method,
+        object? payload,
+        Dictionary<string, string> headers)
+    {
+        using var request = new HttpRequestMessage(method, url);
+        if (payload is not null)
+        {
+            request.Content = new StringContent(
+                JsonSerializer.Serialize(payload),
+                Encoding.UTF8,
+                "application/json");
+        }
+        foreach (var (key, value) in headers)
+        {
+            request.Headers.TryAddWithoutValidation(key, value);
+        }
+        return await client.SendAsync(request);
+    }
+
     public static async Task<JsonDocument> UploadFileAsync(
         this HttpClient client,
         Dictionary<string, string> headers,

@@ -15,7 +15,9 @@ public static class ArtifactService
         => query
             .Include(artifact => artifact.Author)
             .Include(artifact => artifact.FileLinks)
-                .ThenInclude(link => link.File);
+                .ThenInclude(link => link.File)
+            .Include(artifact => artifact.TaskSubmissions)
+                .ThenInclude(submission => submission.Task);
 
     public static async Task<Artifact> GetVisibleArtifactAsync(this AppDbContext db, int artifactId, User user)
     {
@@ -103,9 +105,25 @@ public static class ArtifactService
             ToSummary(artifact.Author!),
             artifact.Status,
             artifact.FileLinks.Count,
+            SourceTypes(artifact),
             artifact.PublishedAt,
             artifact.CreatedAt,
             artifact.UpdatedAt);
+
+    /// <summary>Derive TASK_RESULT / COMPETITION_ENTRY badges from submission links.</summary>
+    public static IReadOnlyList<string> SourceTypes(Artifact artifact)
+    {
+        var sourceTypes = new List<string>();
+        if (artifact.TaskSubmissions.Any(submission => submission.Task?.CompetitionId == null))
+        {
+            sourceTypes.Add(ArtifactSources.TaskResult);
+        }
+        if (artifact.TaskSubmissions.Any(submission => submission.Task?.CompetitionId != null))
+        {
+            sourceTypes.Add(ArtifactSources.CompetitionEntry);
+        }
+        return sourceTypes;
+    }
 
     public static ArtifactReadDto ToRead(Artifact artifact)
         => new(
@@ -115,6 +133,7 @@ public static class ArtifactService
             ToSummary(artifact.Author!),
             artifact.Status,
             artifact.FileLinks.Count,
+            SourceTypes(artifact),
             artifact.PublishedAt,
             artifact.CreatedAt,
             artifact.UpdatedAt,

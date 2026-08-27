@@ -86,6 +86,46 @@ public static class JsonBody
             return new JsonObjectView(document);
         }
     }
+
+    /// <summary>
+    /// Read a request body that may be absent entirely (FastAPI "X | None = None"
+    /// payloads); an empty body yields null instead of a parse error.
+    /// </summary>
+    public static async Task<JsonObjectView?> TryReadAsync(HttpRequest request)
+    {
+        using var reader = new StreamReader(request.Body);
+        var text = await reader.ReadToEndAsync();
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return null;
+        }
+        JsonDocument document;
+        try
+        {
+            document = JsonDocument.Parse(text);
+        }
+        catch (JsonException exception)
+        {
+            throw new ApiValidationException(new[]
+            {
+                new ValidationErrorDetail("json_invalid", new object[] { "body" }, exception.Message),
+            });
+        }
+        using (document)
+        {
+            if (document.RootElement.ValueKind != JsonValueKind.Object)
+            {
+                throw new ApiValidationException(new[]
+                {
+                    new ValidationErrorDetail(
+                        "model_type",
+                        new object[] { "body" },
+                        "Input should be a valid dictionary or object to extract fields from"),
+                });
+            }
+            return new JsonObjectView(document);
+        }
+    }
 }
 
 /// <summary>
@@ -221,6 +261,32 @@ public sealed class FieldReader
         return value;
     }
 
+    /// <summary>Optional int (JSON null accepted); used for PATCH-style fields.</summary>
+    public int? OptionalInt(string field)
+    {
+        if (!_body.Has(field))
+        {
+            return null;
+        }
+        var element = _body.Get(field)!.Value;
+        if (element.ValueKind == JsonValueKind.Null)
+        {
+            return null;
+        }
+        return TryReadInt(element, out var value, field) ? value : null;
+    }
+
+    /// <summary>Required bool using the lax pydantic bool coercion rules.</summary>
+    public bool? RequiredBool(string field)
+    {
+        if (!_body.Has(field))
+        {
+            AddMissing(field);
+            return null;
+        }
+        return OptionalBool(field);
+    }
+
     /// <summary>Optional list of ints (JSON null accepted when nullable).</summary>
     public List<int>? OptionalIntList(string field, bool allowNull, int? maxLength = null)
     {
@@ -335,6 +401,115 @@ public sealed class FieldReader
         }
         var value = OptionalEnum(field, allowed);
         return value ?? string.Empty;
+    }
+
+    /// <summary>
+    /// Required decimal matching pydantic's lax Decimal parsing: JSON numbers
+    /// or numeric strings are accepted.
+    /// </summary>
+    public decimal? RequiredDecimal(
+        string field,
+        int? maxDigits = null,
+        int? decimalPlaces = null,
+        decimal? greaterThan = null,
+        decimal? greaterThanEqual = null)
+    {
+        if (!_body.Has(field))
+        {
+            AddMissing(field);
+            return null;
+        }
+        return OptionalDecimal(field, maxDigits, decimalPlaces, greaterThan, greaterThanEqual);
+    }
+
+    /// <summary>Optional decimal (JSON null accepted) with pydantic constraint errors.</summary>
+    public decimal? OptionalDecimal(
+        string field,
+        int? maxDigits = null,
+        int? decimalPlaces = null,
+        decimal? greaterThan = null,
+        decimal? greaterThanEqual = null)
+    {
+        if (!_body.Has(field))
+        {
+            return null;
+        }
+        var element = _body.Get(field)!.Value;
+        if (element.ValueKind == JsonValueKind.Null)
+        {
+            return null;
+        }
+        decimal value;
+        if (element.ValueKind == JsonValueKind.String)
+        {
+            var text = element.GetString()!.Trim();
+            if (!decimal.TryParse(text, System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out value))
+            {
+                Add("decimal_parsing", field, "Input should be a valid decimal");
+                return null;
+            }
+        }
+        else if (element.ValueKind == JsonValueKind.Number)
+        {
+            try
+            {
+                value = element.GetDecimal();
+            }
+            catch (FormatException)
+            {
+                Add("decimal_parsing", field, "Input should be a valid decimal");
+                return null;
+            }
+            catch (OverflowException)
+            {
+                Add("decimal_parsing", field, "Input should be a valid decimal");
+                return null;
+            }
+        }
+        else
+        {
+            Add("decimal_parsing", field, "Input should be a valid decimal");
+            return null;
+        }
+        if (!DecimalDigitsFits(value, maxDigits, decimalPlaces, out var digitCount, out var places))
+        {
+            if (maxDigits is not null && digitCount > maxDigits)
+            {
+                Add("decimal_max_digits", field, $"Decimal input should have no more than {maxDigits} digits in total");
+                return null;
+            }
+            Add("decimal_max_places", field, $"Decimal input should have no more than {decimalPlaces} decimal places");
+            return null;
+        }
+        if (greaterThan is not null && value <= greaterThan)
+        {
+            Add("greater_than", field, $"Input should be greater than {greaterThan}");
+            return null;
+        }
+        if (greaterThanEqual is not null && value < greaterThanEqual)
+        {
+            Add("greater_than_equal", field, $"Input should be greater than or equal to {greaterThanEqual}");
+            return null;
+        }
+        return value;
+    }
+
+    /// <summary>
+    /// Count significant digits the way pydantic does: leading zeros in the
+    /// integer part and trailing zeros in the fraction never count.
+    /// </summary>
+    private static bool DecimalDigitsFits(decimal value, int? maxDigits, int? decimalPlaces, out int digitCount, out int places)
+    {
+        var text = value.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        var separator = text.IndexOf('.');
+        var integerPart = separator < 0 ? text : text[..separator];
+        var fractionPart = separator < 0 ? string.Empty : text[(separator + 1)..];
+        integerPart = integerPart.TrimStart('0');
+        fractionPart = fractionPart.TrimEnd('0');
+        digitCount = integerPart.Length + fractionPart.Length;
+        places = fractionPart.Length;
+        return (maxDigits is null || digitCount <= maxDigits)
+            && (decimalPlaces is null || places <= decimalPlaces);
     }
 
     /// <summary>

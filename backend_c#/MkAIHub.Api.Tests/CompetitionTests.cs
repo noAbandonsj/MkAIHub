@@ -32,6 +32,49 @@ public sealed class CompetitionTests
         return JsonDocument.Parse(text);
     }
 
+    private static async Task<int> AddTaskAsync(
+        HttpClient client,
+        Dictionary<string, string> headers,
+        int competitionId,
+        object? overrides = null)
+    {
+        var payload = new Dictionary<string, object?>
+        {
+            ["title"] = "竞赛任务",
+            ["description"] = "完成任务后提交成果。",
+            ["deadline_at"] = null,
+            ["required"] = true,
+            ["sort_order"] = 0,
+            ["max_score"] = 100,
+            ["weight"] = 1,
+        };
+        if (overrides is Dictionary<string, object?> additional)
+        {
+            foreach (var (key, value) in additional)
+            {
+                payload[key] = value;
+            }
+        }
+        using var response = await client.PostJsonAsync(
+            $"/api/v1/admin/competitions/{competitionId}/tasks", payload, headers);
+        var text = await response.Content.ReadAsStringAsync();
+        Assert.True(
+            response.StatusCode == HttpStatusCode.Created,
+            $"add competition task failed: {(int)response.StatusCode} {text}");
+        using var body = JsonDocument.Parse(text);
+        return body.RootElement.GetProperty("id").GetInt32();
+    }
+
+    private static async Task PublishAsync(HttpClient client, Dictionary<string, string> headers, int competitionId)
+    {
+        using var response = await client.PostActionAsync(
+            $"/api/v1/admin/competitions/{competitionId}/publish", headers);
+        var text = await response.Content.ReadAsStringAsync();
+        Assert.True(
+            response.StatusCode == HttpStatusCode.OK,
+            $"publish failed: {(int)response.StatusCode} {text}");
+    }
+
     [Fact]
     public async Task CompetitionLifecycleStatusAndPermissions()
     {
@@ -45,14 +88,14 @@ public sealed class CompetitionTests
         using (var upcoming = await CreateCompetitionAsync(client, adminHeaders))
         {
             upcomingId = upcoming.RootElement.GetProperty("id").GetInt32();
+            // New competitions start as administrator-only drafts.
+            Assert.Equal("DRAFT", upcoming.RootElement.GetProperty("lifecycle_status").GetString());
             Assert.Equal("UPCOMING", upcoming.RootElement.GetProperty("status").GetString());
             Assert.Equal(
                 "boss",
                 upcoming.RootElement.GetProperty("creator").GetProperty("username").GetString());
-            Assert.Equal(
-                "2998-01-01T00:00:00Z",
-                upcoming.RootElement.GetProperty("start_at").GetString());
-            Assert.EndsWith("Z", upcoming.RootElement.GetProperty("created_at").GetString());
+            Assert.Equal(0, upcoming.RootElement.GetProperty("task_count").GetInt32());
+            Assert.Equal(0, upcoming.RootElement.GetProperty("registration_count").GetInt32());
         }
 
         int ongoingId;
@@ -67,8 +110,8 @@ public sealed class CompetitionTests
             }))
         {
             ongoingId = ongoing.RootElement.GetProperty("id").GetInt32();
-            Assert.Equal("ONGOING", ongoing.RootElement.GetProperty("status").GetString());
         }
+        int endedId;
         using (var ended = await CreateCompetitionAsync(
             client,
             adminHeaders,
@@ -79,7 +122,7 @@ public sealed class CompetitionTests
                 ["end_at"] = "2020-01-01T00:00:00Z",
             }))
         {
-            Assert.Equal("ENDED", ended.RootElement.GetProperty("status").GetString());
+            endedId = ended.RootElement.GetProperty("id").GetInt32();
         }
 
         using (var staff = environment.CreateClient())
@@ -108,12 +151,44 @@ public sealed class CompetitionTests
             {
                 Assert.Equal(HttpStatusCode.Forbidden, forbiddenUpdate.StatusCode);
             }
-            using (var forbiddenDelete = await DeleteWithHeadersAsync(
-                staff, staffHeaders, $"/api/v1/admin/competitions/{upcomingId}"))
+            using (var forbiddenDelete = await staff.DeleteAsync(
+                staffHeaders, $"/api/v1/admin/competitions/{upcomingId}"))
             {
                 Assert.Equal(HttpStatusCode.Forbidden, forbiddenDelete.StatusCode);
             }
 
+            // DRAFT competitions are invisible to employees.
+            using (var listed = await staff.GetAsync("/api/v1/competitions"))
+            {
+                Assert.Equal(HttpStatusCode.OK, listed.StatusCode);
+                using var body = await listed.ReadJsonAsync();
+                Assert.Equal(0, body.RootElement.GetProperty("total").GetInt32());
+            }
+            using (var hidden = await staff.GetAsync($"/api/v1/competitions/{upcomingId}"))
+            {
+                Assert.Equal(HttpStatusCode.NotFound, hidden.StatusCode);
+            }
+        }
+
+        // Publishing requires at least one configured task.
+        using (var noTasks = await client.PostActionAsync(
+            $"/api/v1/admin/competitions/{upcomingId}/publish", adminHeaders))
+        {
+            Assert.Equal(HttpStatusCode.Conflict, noTasks.StatusCode);
+            using var body = await noTasks.ReadJsonAsync();
+            Assert.Equal("COMPETITION_NO_TASKS", body.RootElement.GetProperty("code").GetString());
+        }
+
+        await AddTaskAsync(client, adminHeaders, upcomingId);
+        await AddTaskAsync(client, adminHeaders, ongoingId);
+        await AddTaskAsync(client, adminHeaders, endedId);
+        await PublishAsync(client, adminHeaders, upcomingId);
+        await PublishAsync(client, adminHeaders, ongoingId);
+        await PublishAsync(client, adminHeaders, endedId);
+
+        using (var staff = environment.CreateClient())
+        {
+            var staffHeaders = await staff.LoginAsync("staff");
             using (var listed = await staff.GetAsync("/api/v1/competitions"))
             {
                 Assert.Equal(HttpStatusCode.OK, listed.StatusCode);
@@ -147,7 +222,20 @@ public sealed class CompetitionTests
                 Assert.Equal(HttpStatusCode.OK, detail.StatusCode);
                 using var body = await detail.ReadJsonAsync();
                 Assert.Equal("ONGOING", body.RootElement.GetProperty("status").GetString());
+                Assert.Equal("PUBLISHED", body.RootElement.GetProperty("lifecycle_status").GetString());
                 Assert.Contains("# 规则", body.RootElement.GetProperty("rules_markdown").GetString());
+                Assert.Equal(1, body.RootElement.GetProperty("task_count").GetInt32());
+                Assert.True(body.RootElement.GetProperty("my_registration").ValueKind == JsonValueKind.Null);
+            }
+
+            // Results stay hidden before publication.
+            using (var results = await staff.GetAsync($"/api/v1/competitions/{ongoingId}/results"))
+            {
+                Assert.Equal(HttpStatusCode.NotFound, results.StatusCode);
+                using var body = await results.ReadJsonAsync();
+                Assert.Equal(
+                    "COMPETITION_RESULTS_NOT_PUBLISHED",
+                    body.RootElement.GetProperty("code").GetString());
             }
 
             using (var missing = await staff.GetAsync("/api/v1/competitions/999"))
@@ -207,6 +295,7 @@ public sealed class CompetitionTests
             Assert.Equal(HttpStatusCode.UnprocessableEntity, nullTitle.StatusCode);
         }
 
+        // Draft competitions accept full edits including start_at.
         using (var updated = await client.PatchJsonAsync(
             $"/api/v1/admin/competitions/{competitionId}",
             new
@@ -223,8 +312,8 @@ public sealed class CompetitionTests
             Assert.Equal("UPCOMING", body.RootElement.GetProperty("status").GetString());
         }
 
-        using (var deleted = await DeleteWithHeadersAsync(
-            client, adminHeaders, $"/api/v1/admin/competitions/{competitionId}"))
+        using (var deleted = await client.DeleteAsync(
+            adminHeaders, $"/api/v1/admin/competitions/{competitionId}"))
         {
             Assert.Equal(HttpStatusCode.NoContent, deleted.StatusCode);
         }
@@ -249,18 +338,5 @@ public sealed class CompetitionTests
             payload[key] = value;
         }
         return payload;
-    }
-
-    private static async Task<HttpResponseMessage> DeleteWithHeadersAsync(
-        HttpClient client,
-        Dictionary<string, string> headers,
-        string url)
-    {
-        var request = new HttpRequestMessage(HttpMethod.Delete, url);
-        foreach (var (key, value) in headers)
-        {
-            request.Headers.TryAddWithoutValidation(key, value);
-        }
-        return await client.SendAsync(request);
     }
 }

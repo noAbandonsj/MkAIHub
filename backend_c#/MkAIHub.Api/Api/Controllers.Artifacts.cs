@@ -33,6 +33,7 @@ public sealed class ArtifactsController : ControllerBase
         var q = QueryParams.ParseSearch(Request, errors, "q", 100);
         var mine = QueryParams.ParseBool(Request, errors, "mine");
         var statusFilter = QueryParams.ParseEnum(Request, errors, "status", ArtifactStatuses.All);
+        var sourceFilter = QueryParams.ParseEnum(Request, errors, "source", ArtifactSources.All);
         QueryParams.ThrowIfErrors(errors);
 
         IQueryable<Artifact> query = _db.Artifacts.WithDetails();
@@ -61,6 +62,15 @@ public sealed class ArtifactsController : ControllerBase
             query = query.Where(artifact =>
                 EF.Functions.Like(artifact.Title, pattern)
                 || EF.Functions.Like(artifact.Summary, pattern));
+        }
+        if (sourceFilter is not null)
+        {
+            var sourceArtifactIds = _db.TaskSubmissions
+                .Where(submission => sourceFilter == ArtifactSources.TaskResult
+                    ? submission.Task!.CompetitionId == null
+                    : submission.Task!.CompetitionId != null)
+                .Select(submission => submission.ArtifactId);
+            query = query.Where(artifact => sourceArtifactIds.Contains(artifact.Id));
         }
 
         var total = await query.CountAsync(cancellationToken);
@@ -116,6 +126,32 @@ public sealed class ArtifactsController : ControllerBase
         QueryParams.ThrowIfErrors(errors);
         var artifact = await _db.GetVisibleArtifactAsync(parsedId, auth.User);
         return this.SnakeJson(ArtifactService.ToRead(artifact));
+    }
+
+    /// <summary>Show which tasks reference this artifact; others see accepted rounds only.</summary>
+    [HttpGet("{artifactId}/task-submissions")]
+    public async Task<IActionResult> ListArtifactTaskSources(string artifactId, CancellationToken cancellationToken)
+    {
+        var auth = await _auth.GetCurrentAuthAsync(Request);
+        var errors = new List<ValidationErrorDetail>();
+        var parsedId = QueryParams.ParsePathInt(RouteData.Values, errors, "artifact_id", "artifactId");
+        QueryParams.ThrowIfErrors(errors);
+
+        var artifact = await _db.GetVisibleArtifactAsync(parsedId, auth.User);
+        var submissions = await _db.TaskSubmissions
+            .WithDetails()
+            .Where(submission => submission.ArtifactId == artifact.Id
+                && (submission.Participant!.UserId == auth.User.Id
+                    || submission.Status == SubmissionStatuses.Accepted))
+            .OrderByDescending(submission => submission.SubmittedAt)
+            .ThenByDescending(submission => submission.Id)
+            .ToListAsync(cancellationToken);
+        var items = new List<TaskSubmissionDto>();
+        foreach (var submission in submissions)
+        {
+            items.Add(await _db.ToSubmissionDtoAsync(submission, includeTask: true, viewer: auth.User));
+        }
+        return this.SnakeJson(new ArtifactTaskSourceListResponseDto(items));
     }
 
     [HttpPatch("{artifactId}")]

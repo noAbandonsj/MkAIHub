@@ -44,6 +44,7 @@ public sealed record ArtifactListItemDto(
     UserSummaryDto Author,
     string Status,
     int AttachmentCount,
+    IReadOnlyList<string> SourceTypes,
     DateTime? PublishedAt,
     DateTime CreatedAt,
     DateTime UpdatedAt);
@@ -55,6 +56,7 @@ public sealed record ArtifactReadDto(
     UserSummaryDto Author,
     string Status,
     int AttachmentCount,
+    IReadOnlyList<string> SourceTypes,
     DateTime? PublishedAt,
     DateTime CreatedAt,
     DateTime UpdatedAt,
@@ -91,6 +93,8 @@ public sealed record TaskListItemDto(
     string Title,
     UserSummaryDto Creator,
     string Status,
+    int? CompetitionId,
+    string? CompetitionTitle,
     DateTime? DeadlineAt,
     DateTime? CompletedAt,
     DateTime? ClosedAt,
@@ -102,12 +106,17 @@ public sealed record TaskReadDto(
     string Title,
     UserSummaryDto Creator,
     string Status,
+    int? CompetitionId,
+    string? CompetitionTitle,
     DateTime? DeadlineAt,
     DateTime? CompletedAt,
     DateTime? ClosedAt,
     DateTime CreatedAt,
     DateTime UpdatedAt,
-    string Description);
+    string Description,
+    TaskParticipantDto? MyParticipation,
+    int ParticipantCount,
+    int SubmissionCount);
 
 public sealed record TaskListResponseDto(
     IReadOnlyList<TaskListItemDto> Items,
@@ -146,6 +155,7 @@ public sealed record CompetitionListItemDto(
     string Summary,
     UserSummaryDto Creator,
     string Status,
+    string LifecycleStatus,
     DateTime StartAt,
     DateTime EndAt,
     DateTime CreatedAt,
@@ -157,11 +167,16 @@ public sealed record CompetitionReadDto(
     string Summary,
     UserSummaryDto Creator,
     string Status,
+    string LifecycleStatus,
     DateTime StartAt,
     DateTime EndAt,
     DateTime CreatedAt,
     DateTime UpdatedAt,
-    string RulesMarkdown);
+    string RulesMarkdown,
+    int TaskCount,
+    int RegistrationCount,
+    CompetitionRegistrationSummaryDto? MyRegistration,
+    bool ResultsPublished);
 
 public sealed record CompetitionListResponseDto(
     IReadOnlyList<CompetitionListItemDto> Items,

@@ -266,4 +266,24 @@ public sealed class AdminController : ControllerBase
         _logger.LogAdminAction("comment.restore", auth.User.Id, "comment", comment.Id);
         return NoContent();
     }
+
+    /// <summary>Reopen a closed task for correction; completed tasks stay terminal.</summary>
+    [HttpPost("tasks/{taskId}/reopen")]
+    public async Task<IActionResult> ReopenTask(string taskId, CancellationToken cancellationToken)
+    {
+        var auth = _auth.RequireAdminCsrf(Request, await _auth.GetCurrentAuthAsync(Request));
+        var errors = new List<ValidationErrorDetail>();
+        var parsedId = QueryParams.ParsePathInt(RouteData.Values, errors, "task_id", "taskId");
+        QueryParams.ThrowIfErrors(errors);
+
+        var task = await _db.GetTaskAsync(parsedId, auth.User);
+        await _db.ReopenTaskAsync(task);
+        _logger.LogAdminAction(
+            "task.reopen",
+            auth.User.Id,
+            "task",
+            task.Id,
+            new Dictionary<string, object?> { ["status"] = task.Status });
+        return this.SnakeJson(await _db.ToReadAsync(task, auth.User));
+    }
 }

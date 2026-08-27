@@ -95,9 +95,14 @@ public sealed class DatabaseTests
                     "artifact_files",
                     "artifacts",
                     "comments",
+                    "competition_registrations",
+                    "competition_results",
+                    "competition_reviews",
                     "competitions",
                     "files",
                     "issues",
+                    "task_participants",
+                    "task_submissions",
                     "tasks",
                     "user_sessions",
                     "users",
@@ -105,7 +110,20 @@ public sealed class DatabaseTests
                 tables.ToHashSet());
 
             Assert.Equal(Migrator.Head, QueryString(connection, "SELECT version_num FROM alembic_version"));
-            Assert.Equal("20260819_0005", Migrator.Head);
+            Assert.Equal("20260819_0007", Migrator.Head);
+
+            // The closed-loop rebuild keeps the widened task status CHECK and the
+            // competition lifecycle CHECK delivered by migrations 0006/0007.
+            Assert.Contains(
+                "status IN ('OPEN', 'IN_PROGRESS', 'REVIEWING', 'COMPLETED', 'CLOSED')",
+                QueryString(
+                    connection,
+                    "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'tasks'"));
+            Assert.Equal(
+                1L,
+                QueryLong(
+                    connection,
+                    "SELECT COUNT(*) FROM pragma_table_info('competitions') WHERE name = 'status'"));
         }
         finally
         {
