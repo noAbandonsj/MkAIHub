@@ -97,9 +97,16 @@ def list_tasks(
     if status_filter is not None:
         conditions.append(Task.status == status_filter.value)
     if auth.user.role != UserRole.SYSTEM_ADMIN.value:
-        # Tasks of DRAFT competitions follow the competition visibility rule.
+        # Tasks of DRAFT competitions follow the competition visibility rule;
+        # standalone tasks (competition_id NULL) stay visible, which a plain
+        # NOT IN would drop once any DRAFT competition exists (NULL semantics).
         draft_competition_ids = select(Competition.id).where(Competition.status == "DRAFT")
-        conditions.append(~Task.competition_id.in_(draft_competition_ids))
+        conditions.append(
+            or_(
+                Task.competition_id.is_(None),
+                ~Task.competition_id.in_(draft_competition_ids),
+            )
+        )
     search = q.strip() if q else ""
     if search:
         pattern = f"%{search}%"

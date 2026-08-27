@@ -99,17 +99,14 @@ public sealed class TasksController : ControllerBase
         if (auth.User.Role != UserRoles.SystemAdmin)
         {
             // Tasks of DRAFT competitions follow the competition visibility rule;
-            // a non-empty draft set also hides standalone rows exactly like the
-            // SQL "competition_id NOT IN (...)" NULL semantics of the Python list.
+            // standalone tasks (CompetitionId NULL) stay visible, matching the
+            // Python list's explicit IS NULL OR NOT IN condition.
             var draftCompetitionIds = await _db.Competitions
                 .Where(competition => competition.Status == CompetitionLifecycles.Draft)
                 .Select(competition => competition.Id)
                 .ToListAsync(cancellationToken);
-            if (draftCompetitionIds.Count > 0)
-            {
-                query = query.Where(task => task.CompetitionId != null
-                    && !draftCompetitionIds.Contains(task.CompetitionId.Value));
-            }
+            query = query.Where(task => task.CompetitionId == null
+                || !draftCompetitionIds.Contains(task.CompetitionId.Value));
         }
         var search = q?.Trim() ?? string.Empty;
         if (search.Length > 0)

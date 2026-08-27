@@ -312,6 +312,102 @@ public sealed class TaskTests
         }
     }
 
+    [Fact]
+    public async Task DraftCompetitionKeepsStandaloneTasksVisible()
+    {
+        using var environment = new TestEnvironment();
+        await environment.SeedUserAsync("boss", "SYSTEM_ADMIN");
+        await environment.SeedUserAsync("worker");
+        using var admin = environment.CreateClient();
+        using var worker = environment.CreateClient();
+        var adminHeaders = await admin.LoginAsync("boss");
+        var workerHeaders = await worker.LoginAsync("worker");
+
+        int competitionId;
+        using (var draft = await admin.PostJsonAsync(
+            "/api/v1/admin/competitions",
+            new Dictionary<string, object?>
+            {
+                ["title"] = "未发布竞赛",
+                ["summary"] = "尚未发布的竞赛。",
+                ["rules_markdown"] = "# 规则\n\n每人限提交一份作品。",
+                ["start_at"] = "2998-01-01T00:00:00Z",
+                ["end_at"] = "2999-01-01T00:00:00Z",
+            },
+            adminHeaders))
+        {
+            var text = await draft.Content.ReadAsStringAsync();
+            Assert.True(
+                draft.StatusCode == HttpStatusCode.Created,
+                $"create competition failed: {(int)draft.StatusCode} {text}");
+            using var body = JsonDocument.Parse(text);
+            competitionId = body.RootElement.GetProperty("id").GetInt32();
+            Assert.Equal("DRAFT", body.RootElement.GetProperty("lifecycle_status").GetString());
+        }
+        using (var added = await admin.PostJsonAsync(
+            $"/api/v1/admin/competitions/{competitionId}/tasks",
+            new Dictionary<string, object?>
+            {
+                ["title"] = "竞赛任务",
+                ["description"] = "完成任务后提交成果。",
+                ["deadline_at"] = null,
+                ["required"] = true,
+                ["sort_order"] = 0,
+                ["max_score"] = 100,
+                ["weight"] = 1,
+            },
+            adminHeaders))
+        {
+            Assert.Equal(HttpStatusCode.Created, added.StatusCode);
+        }
+
+        int standaloneId;
+        using (var task = await CreateTaskAsync(
+            worker,
+            workerHeaders,
+            new Dictionary<string, object?>
+            {
+                ["title"] = "独立任务",
+                ["description"] = "与竞赛无关。",
+            }))
+        {
+            standaloneId = task.RootElement.GetProperty("id").GetInt32();
+        }
+
+        // Employees keep seeing standalone tasks even when DRAFT competitions exist;
+        // only tasks under the DRAFT competition follow the visibility rule.
+        using (var listResponse = await worker.GetAsync("/api/v1/tasks", workerHeaders))
+        {
+            Assert.Equal(HttpStatusCode.OK, listResponse.StatusCode);
+            using var list = await listResponse.ReadJsonAsync();
+            var ids = new HashSet<int>();
+            foreach (var item in list.RootElement.GetProperty("items").EnumerateArray())
+            {
+                ids.Add(item.GetProperty("id").GetInt32());
+                var itemCompetition = item.GetProperty("competition_id");
+                Assert.False(
+                    itemCompetition.ValueKind != JsonValueKind.Null
+                        && itemCompetition.GetInt32() == competitionId,
+                    "tasks under a DRAFT competition must stay hidden from employees");
+            }
+            Assert.Contains(standaloneId, ids);
+        }
+        using (var detail = await worker.GetAsync($"/api/v1/tasks/{standaloneId}", workerHeaders))
+        {
+            Assert.Equal(HttpStatusCode.OK, detail.StatusCode);
+        }
+
+        using (var adminList = await admin.GetAsync("/api/v1/tasks", adminHeaders))
+        {
+            Assert.Equal(HttpStatusCode.OK, adminList.StatusCode);
+            using var list = await adminList.ReadJsonAsync();
+            var ids = list.RootElement.GetProperty("items").EnumerateArray()
+                .Select(item => item.GetProperty("id").GetInt32())
+                .ToHashSet();
+            Assert.Contains(standaloneId, ids);
+        }
+    }
+
     private static async Task<HttpResponseMessage> StateActionAsync(
         HttpClient client,
         Dictionary<string, string> headers,

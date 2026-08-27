@@ -3,6 +3,7 @@ from __future__ import annotations
 from fastapi.testclient import TestClient
 
 from test_artifacts import login, seed_user
+from test_competitions import add_competition_task, create_competition
 
 
 def create_task(client: TestClient, headers: dict[str, str], **overrides) -> dict:
@@ -143,3 +144,29 @@ def test_task_validation_and_not_found(client: TestClient, test_settings) -> Non
         json={"title": None},
     ).status_code == 422
     assert client.get("/api/v1/tasks/99999").status_code == 404
+
+
+def test_draft_competition_keeps_standalone_tasks_visible(client: TestClient, test_settings) -> None:
+    seed_user(test_settings, username="boss", role="SYSTEM_ADMIN")
+    seed_user(test_settings, username="worker")
+    admin = TestClient(client.app)
+    worker = TestClient(client.app)
+    admin_headers = login(admin, "boss")
+    worker_headers = login(worker, "worker")
+
+    standalone = create_task(worker, worker_headers, title="独立任务", description="与竞赛无关。")
+    draft = create_competition(admin, admin_headers, title="未发布竞赛")
+    add_competition_task(admin, admin_headers, draft["id"])
+    assert draft["lifecycle_status"] == "DRAFT"
+
+    # Employees keep seeing standalone tasks even when DRAFT competitions exist;
+    # only tasks under the DRAFT competition follow the visibility rule.
+    worker_list = worker.get("/api/v1/tasks", headers=worker_headers).json()["items"]
+    worker_ids = {item["id"] for item in worker_list}
+    assert standalone["id"] in worker_ids
+    assert all(item["competition_id"] != draft["id"] for item in worker_list)
+    assert worker.get(f"/api/v1/tasks/{standalone['id']}", headers=worker_headers).status_code == 200
+
+    admin_list = admin.get("/api/v1/tasks", headers=admin_headers).json()["items"]
+    admin_ids = {item["id"] for item in admin_list}
+    assert standalone["id"] in admin_ids
