@@ -7,7 +7,7 @@ Vue 3 + TypeScript + Vite 前端、FastAPI + SQLAlchemy + Alembic 后端、SQLit
 ## 目录
 
 - `backend/` — Python 3.13 FastAPI（uv 管理）。分层：`app/api/v1/*` 路由 → `app/services/*` 业务 → `app/models/*` SQLAlchemy 模型；`app/schemas/*` Pydantic、`app/core/*` 配置/错误/日志/安全、`app/db/*` 会话、`migrations/` Alembic。
-- `backend_c#/` — Python 后端的 C#/.NET 6 移植版（EF Core 6 + xUnit），已对齐 Python 版批次 1–5 全部功能（认证、展品、任务、Issues、竞赛、管理动作、结构化日志、备份恢复命令）。与 Python 版 API 契约、SQLite 数据库、Argon2 密码哈希完全互通，可共用同一个数据库文件（已实测双向读写）。改动 C# 版时只动本目录，不碰 `backend/`。
+- `backend_c#/` — Python 后端的 C#/.NET 6 移植版（EF Core 6 + xUnit），已对齐 Python 版批次 1–15 全部后端功能（认证、展品、任务、Issues、竞赛、管理动作、结构化日志、备份恢复命令，以及第二阶段任务/竞赛闭环、评审计分与个人工作台）。与 Python 版 API 契约、SQLite 数据库、Argon2 密码哈希完全互通，可共用同一个数据库文件（已实测双向读写）。改动 C# 版时只动本目录，不碰 `backend/`。
 - `frontend/` — Vue 3 + Pinia + vue-router + Element Plus + markdown-it。`src/api/` 接口封装、`src/components/<域>/`、`src/views/<域>/`、`src/stores/`、`src/router/`；测试与源码同目录（`*.test.ts`）。
 - `docs/` — 项目规划、首版实现方案、第二阶段闭环实施方案与批次7数据契约，改动范围/边界前必读。
 - `prototype/` — 静态 HTML 原型，仅作迁移参考，不维护。
@@ -20,7 +20,7 @@ Vue 3 + TypeScript + Vite 前端、FastAPI + SQLAlchemy + Alembic 后端、SQLit
 
 ```text
 uv sync --locked
-uv run alembic upgrade head        # 迁移头 20260819_0007（C# 版暂缓同步，停留在 0005）
+uv run alembic upgrade head        # 迁移头 20260819_0007（C# 版 Migrator 同步复刻至同一迁移头）
 uv run python -m app.cli create-admin
 uv run pytest                       # 后端测试
 uv run uvicorn app.main:app --reload
@@ -44,7 +44,7 @@ C# 后端（在 `backend_c#/` 下执行）：`dotnet build`、`dotnet test`、
 
 ## 约定与边界
 
-- API 契约：路径 `/api/health`、`/api/v1/{auth,admin/users,admin/competitions(含 tasks/publish/publish-results/archive/registrations),admin/comments,admin/tasks,artifacts,tasks,task-submissions(含 competition-review),issues,competitions(含 registrations/tasks/results),files,explore,workbench}`；字段 snake_case；UTC ISO 时间带 `Z` 后缀；错误体统一 `{code, message, details?}`。第二阶段以 Python 版为准，C# 版暂缓同步。
+- API 契约：路径 `/api/health`、`/api/v1/{auth,admin/users,admin/competitions(含 tasks/publish/publish-results/archive/registrations),admin/comments,admin/tasks,artifacts,tasks,task-submissions(含 competition-review),issues,competitions(含 registrations/tasks/results),files,explore,workbench}`；字段 snake_case；UTC ISO 时间带 `Z` 后缀；错误体统一 `{code, message, details?}`。以 Python 版为契约基准；C# 版自批次 14 起恢复同步，两后端接口行为保持一致。
 - 认证：服务端会话 + HttpOnly Cookie（`mkaihub_session`）+ CSRF 头 `X-CSRF-Token`；角色仅 `EMPLOYEE` / `SYSTEM_ADMIN`，不开放注册；密码 Argon2id（m=19456, t=2, p=2），两后端哈希互通。
 - Alembic 迁移文件名用日期前缀（`20260819_000N_*`）；C# 版 `MkAIHub.Api/Data/Migrator.cs` 复刻同一套 DDL 并维护 `alembic_version`，新增迁移时两处需同步。
 - 前端 Element Plus 按组件逐个引入，禁止全局整库注册；`@` 别名指向 `frontend/src`；代码风格为无分号、单引号。
