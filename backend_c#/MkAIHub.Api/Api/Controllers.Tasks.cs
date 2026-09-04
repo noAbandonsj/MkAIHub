@@ -135,8 +135,8 @@ public sealed class TasksController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> CreateTask(CancellationToken cancellationToken)
     {
-        var payload = await TaskCreate.ParseAsync(Request);
         var auth = _auth.RequireCsrf(Request, await _auth.GetCurrentAuthAsync(Request));
+        var payload = await TaskCreate.ParseAsync(Request);
 
         var now = DateTime.UtcNow;
         var task = new TaskItem
@@ -335,8 +335,8 @@ public sealed class TasksController : ControllerBase
     [HttpPost("{taskId}/submissions")]
     public async Task<IActionResult> SubmitToTask(string taskId, CancellationToken cancellationToken)
     {
-        var payload = await TaskSubmissionCreate.ParseAsync(Request);
         var auth = _auth.RequireCsrf(Request, await _auth.GetCurrentAuthAsync(Request));
+        var payload = await TaskSubmissionCreate.ParseAsync(Request);
         var errors = new List<ValidationErrorDetail>();
         var parsedId = QueryParams.ParsePathInt(RouteData.Values, errors, "task_id", "taskId");
         QueryParams.ThrowIfErrors(errors);

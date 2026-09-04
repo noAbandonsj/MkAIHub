@@ -216,4 +216,65 @@ public sealed class WorkbenchTests
                 body.RootElement.GetProperty("statistics").GetProperty("accepted_submissions").GetInt32());
         }
     }
+
+    [Fact]
+    public async Task WorkbenchCompetitionTasksCountsEachTaskNotEachCompetition()
+    {
+        using var environment = new TestEnvironment();
+        await environment.SeedUserAsync("boss", "SYSTEM_ADMIN");
+        await environment.SeedUserAsync("member");
+        using var bossClient = environment.CreateClient();
+        using var memberClient = environment.CreateClient();
+        var boss = await bossClient.LoginAsync("boss");
+        var member = await memberClient.LoginAsync("member");
+
+        int competitionId;
+        using (var competition = await bossClient.PostJsonAsync(
+            "/api/v1/admin/competitions",
+            new
+            {
+                title = "多任务竞赛",
+                summary = "验证竞赛任务计数按任务数而非竞赛数统计。",
+                rules_markdown = "# 规则",
+                start_at = "2020-01-01T00:00:00Z",
+                end_at = "2999-01-01T00:00:00Z",
+            },
+            boss))
+        {
+            using var body = await competition.ReadJsonAsync();
+            competitionId = body.RootElement.GetProperty("id").GetInt32();
+        }
+        for (var sortOrder = 1; sortOrder <= 2; sortOrder += 1)
+        {
+            using var task = await bossClient.PostJsonAsync(
+                $"/api/v1/admin/competitions/{competitionId}/tasks",
+                new
+                {
+                    title = $"竞赛任务{sortOrder}",
+                    description = "报名后自动领取。",
+                    deadline_at = (string?)null,
+                    required = true,
+                    sort_order = sortOrder,
+                    max_score = "30.00",
+                    weight = "10.00",
+                },
+                boss);
+            Assert.Equal(HttpStatusCode.Created, task.StatusCode);
+        }
+        Assert.Equal(
+            HttpStatusCode.OK,
+            (await bossClient.PostActionAsync(
+                $"/api/v1/admin/competitions/{competitionId}/publish", boss)).StatusCode);
+        Assert.Equal(
+            HttpStatusCode.Created,
+            (await memberClient.PostActionAsync(
+                $"/api/v1/competitions/{competitionId}/registrations", member)).StatusCode);
+
+        using var summary = await memberClient.GetAsync("/api/v1/workbench");
+        Assert.Equal(HttpStatusCode.OK, summary.StatusCode);
+        using var summaryBody = await summary.ReadJsonAsync();
+        var counts = summaryBody.RootElement.GetProperty("counts");
+        Assert.Equal(2, counts.GetProperty("participated_tasks").GetInt32());
+        Assert.Equal(2, counts.GetProperty("competition_tasks").GetInt32());
+    }
 }

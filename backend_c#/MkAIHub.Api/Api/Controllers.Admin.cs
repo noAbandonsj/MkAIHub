@@ -64,8 +64,8 @@ public sealed class AdminController : ControllerBase
     [HttpPost("users")]
     public async Task<IActionResult> CreateUser(CancellationToken cancellationToken)
     {
-        var payload = await AdminUserCreate.ParseAsync(Request);
         var auth = _auth.RequireAdminCsrf(Request, await _auth.GetCurrentAuthAsync(Request));
+        var payload = await AdminUserCreate.ParseAsync(Request);
 
         var existing = await _db.Users
             .Where(user => user.Username == payload.Username)

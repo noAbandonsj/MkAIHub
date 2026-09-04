@@ -96,8 +96,8 @@ public sealed class ArtifactsController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> CreateArtifact(CancellationToken cancellationToken)
     {
-        var payload = await ArtifactCreate.ParseAsync(Request);
         var auth = _auth.RequireCsrf(Request, await _auth.GetCurrentAuthAsync(Request));
+        var payload = await ArtifactCreate.ParseAsync(Request);
 
         var now = DateTime.UtcNow;
         var artifact = new Artifact
@@ -340,8 +340,8 @@ public sealed class ArtifactCommentsController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> CreateComment(string artifactId, CancellationToken cancellationToken)
     {
-        var payload = await CommentCreate.ParseAsync(Request);
         var auth = _auth.RequireCsrf(Request, await _auth.GetCurrentAuthAsync(Request));
+        var payload = await CommentCreate.ParseAsync(Request);
         var errors = new List<ValidationErrorDetail>();
         var parsedId = QueryParams.ParsePathInt(RouteData.Values, errors, "artifact_id", "artifactId");
         QueryParams.ThrowIfErrors(errors);

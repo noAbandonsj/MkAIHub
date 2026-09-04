@@ -170,8 +170,8 @@ public sealed class AdminCompetitionsController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> CreateCompetition(CancellationToken cancellationToken)
     {
-        var payload = await CompetitionCreate.ParseAsync(Request);
         var auth = _auth.RequireAdminCsrf(Request, await _auth.GetCurrentAuthAsync(Request));
+        var payload = await CompetitionCreate.ParseAsync(Request);
 
         var now = DateTime.UtcNow;
         var competition = new Competition
@@ -345,8 +345,8 @@ public sealed class AdminCompetitionsController : ControllerBase
     [HttpPost("{competitionId}/tasks")]
     public async Task<IActionResult> CreateCompetitionTask(string competitionId, CancellationToken cancellationToken)
     {
-        var payload = await CompetitionTaskCreate.ParseAsync(Request);
         var auth = _auth.RequireAdminCsrf(Request, await _auth.GetCurrentAuthAsync(Request));
+        var payload = await CompetitionTaskCreate.ParseAsync(Request);
         var errors = new List<ValidationErrorDetail>();
         var parsedId = QueryParams.ParsePathInt(RouteData.Values, errors, "competition_id", "competitionId");
         QueryParams.ThrowIfErrors(errors);
@@ -373,8 +373,8 @@ public sealed class AdminCompetitionsController : ControllerBase
         string taskId,
         CancellationToken cancellationToken)
     {
-        var payload = await CompetitionTaskUpdate.ParseAsync(Request);
         var auth = _auth.RequireAdminCsrf(Request, await _auth.GetCurrentAuthAsync(Request));
+        var payload = await CompetitionTaskUpdate.ParseAsync(Request);
         var errors = new List<ValidationErrorDetail>();
         var parsedCompetitionId = QueryParams.ParsePathInt(RouteData.Values, errors, "competition_id", "competitionId");
         var parsedTaskId = QueryParams.ParsePathInt(RouteData.Values, errors, "task_id", "taskId");
@@ -450,8 +450,8 @@ public sealed class AdminCompetitionsController : ControllerBase
     [HttpPost("{competitionId}/publish-results")]
     public async Task<IActionResult> PublishCompetitionResults(string competitionId, CancellationToken cancellationToken)
     {
-        var payload = await PublishResultsRequest.ParseAsync(Request);
         var auth = _auth.RequireAdminCsrf(Request, await _auth.GetCurrentAuthAsync(Request));
+        var payload = await PublishResultsRequest.ParseAsync(Request);
         var errors = new List<ValidationErrorDetail>();
         var parsedId = QueryParams.ParsePathInt(RouteData.Values, errors, "competition_id", "competitionId");
         QueryParams.ThrowIfErrors(errors);

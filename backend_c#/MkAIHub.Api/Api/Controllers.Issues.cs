@@ -71,8 +71,8 @@ public sealed class IssuesController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> CreateIssue(CancellationToken cancellationToken)
     {
-        var payload = await IssueCreate.ParseAsync(Request);
         var auth = _auth.RequireCsrf(Request, await _auth.GetCurrentAuthAsync(Request));
+        var payload = await IssueCreate.ParseAsync(Request);
 
         var now = DateTime.UtcNow;
         var issue = new Issue
@@ -239,8 +239,8 @@ public sealed class IssueCommentsController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> CreateComment(string issueId, CancellationToken cancellationToken)
     {
-        var payload = await CommentCreate.ParseAsync(Request);
         var auth = _auth.RequireCsrf(Request, await _auth.GetCurrentAuthAsync(Request));
+        var payload = await CommentCreate.ParseAsync(Request);
         var errors = new List<ValidationErrorDetail>();
         var parsedId = QueryParams.ParsePathInt(RouteData.Values, errors, "issue_id", "issueId");
         QueryParams.ThrowIfErrors(errors);

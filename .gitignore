@@ -42,8 +42,9 @@ pnpm-debug.log*
 coverage/
 
 # Runtime data (SQLite, uploads, generated files and caches)
-data/
-storage/
+# 锚定到仓库根，避免误伤 backend_c#/MkAIHub.Api/Data/ 等源码目录
+/data/
+/storage/
 cache/
 tmp/
 logs/

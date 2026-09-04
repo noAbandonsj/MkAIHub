@@ -38,8 +38,8 @@ public sealed class TaskSubmissionsController : ControllerBase
     [HttpPost("{submissionId}/request-revision")]
     public async Task<IActionResult> RequestRevision(string submissionId, CancellationToken cancellationToken)
     {
-        var payload = await SubmissionRevisionRequest.ParseAsync(Request);
         var auth = _auth.RequireCsrf(Request, await _auth.GetCurrentAuthAsync(Request));
+        var payload = await SubmissionRevisionRequest.ParseAsync(Request);
         var errors = new List<ValidationErrorDetail>();
         var parsedId = QueryParams.ParsePathInt(RouteData.Values, errors, "submission_id", "submissionId");
         QueryParams.ThrowIfErrors(errors);
@@ -53,8 +53,8 @@ public sealed class TaskSubmissionsController : ControllerBase
     [HttpPost("{submissionId}/accept")]
     public async Task<IActionResult> AcceptSubmission(string submissionId, CancellationToken cancellationToken)
     {
-        var payload = await SubmissionAcceptRequest.ParseAsync(Request);
         var auth = _auth.RequireCsrf(Request, await _auth.GetCurrentAuthAsync(Request));
+        var payload = await SubmissionAcceptRequest.ParseAsync(Request);
         var errors = new List<ValidationErrorDetail>();
         var parsedId = QueryParams.ParsePathInt(RouteData.Values, errors, "submission_id", "submissionId");
         QueryParams.ThrowIfErrors(errors);
@@ -69,8 +69,8 @@ public sealed class TaskSubmissionsController : ControllerBase
     [HttpPost("{submissionId}/reject")]
     public async Task<IActionResult> RejectSubmission(string submissionId, CancellationToken cancellationToken)
     {
-        var payload = await SubmissionRejectRequest.ParseAsync(Request);
         var auth = _auth.RequireCsrf(Request, await _auth.GetCurrentAuthAsync(Request));
+        var payload = await SubmissionRejectRequest.ParseAsync(Request);
         var errors = new List<ValidationErrorDetail>();
         var parsedId = QueryParams.ParsePathInt(RouteData.Values, errors, "submission_id", "submissionId");
         QueryParams.ThrowIfErrors(errors);
@@ -85,8 +85,8 @@ public sealed class TaskSubmissionsController : ControllerBase
     [HttpPost("{submissionId}/competition-review")]
     public async Task<IActionResult> ReviewCompetitionSubmission(string submissionId, CancellationToken cancellationToken)
     {
-        var payload = await CompetitionReviewRequest.ParseAsync(Request);
         var auth = _auth.RequireAdminCsrf(Request, await _auth.GetCurrentAuthAsync(Request));
+        var payload = await CompetitionReviewRequest.ParseAsync(Request);
         var errors = new List<ValidationErrorDetail>();
         var parsedId = QueryParams.ParsePathInt(RouteData.Values, errors, "submission_id", "submissionId");
         QueryParams.ThrowIfErrors(errors);

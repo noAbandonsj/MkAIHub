@@ -25,8 +25,9 @@ public static class WorkbenchService
                 db.Tasks,
                 participant => participant.TaskId,
                 task => task.Id,
-                (participant, task) => task.CompetitionId)
-            .Where(competitionId => competitionId != null)
+                (participant, task) => new { participant.TaskId, task.CompetitionId })
+            .Where(row => row.CompetitionId != null)
+            .Select(row => row.TaskId)
             .Distinct()
             .CountAsync();
         var pendingTaskReviews = await db.TaskSubmissions

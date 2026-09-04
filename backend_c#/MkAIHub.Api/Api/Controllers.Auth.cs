@@ -116,8 +116,8 @@ public sealed class AuthController : ControllerBase
     [HttpPost("change-password")]
     public async Task<IActionResult> ChangePassword(CancellationToken cancellationToken)
     {
-        var payload = await ChangePasswordRequest.ParseAsync(Request);
         var auth = _auth.RequireCsrf(Request, await _auth.GetCurrentAuthAsync(Request));
+        var payload = await ChangePasswordRequest.ParseAsync(Request);
         if (!PasswordHasher.VerifyPassword(payload.CurrentPassword, auth.User.PasswordHash))
         {
             throw new AppError("CURRENT_PASSWORD_INVALID", "Current password is incorrect", 400);

@@ -74,12 +74,12 @@ public sealed class JsonLogger : ILogger
         }
         if (state is IReadOnlyList<KeyValuePair<string, object?>> fields)
         {
+            // Mirror JsonFormatter: every structured field joins the payload;
+            // "{OriginalFormat}" is the template key added by the Microsoft
+            // logging extensions and plays the role of a reserved record field.
             foreach (var field in fields)
             {
-                if (field.Key is "method" or "path" or "status_code" or "duration_ms"
-                    or "action" or "actor_id" or "target_type" or "target_id"
-                    or "username" or "role" or "fields" or "title"
-                    && field.Value is not null)
+                if (field.Key != "{OriginalFormat}" && !payload.ContainsKey(field.Key))
                 {
                     payload[field.Key] = field.Value;
                 }
